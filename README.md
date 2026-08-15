@@ -74,12 +74,12 @@ It does **not**:
 
 ## Requirements
 
-| Need | Detail |
-| --- | --- |
-| Bun | CLI is `packages/core/src/cli.ts` with `#!/usr/bin/env bun`. `npx crossdeps` / `bunx crossdeps` only work if `bun` is on `PATH`. |
-| Config module | Loaded with dynamic `import()`. Must be valid ESM that Bun can import. |
-| Privileges | Install commands run as-is. If a command uses `sudo` / `choco` / `brew`, the machine must allow that. |
-| Network | Most catalog commands download installers. Offline machines will fail those commands. |
+| Need          | Detail                                                                                                                           |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Bun           | CLI is `packages/core/src/cli.ts` with `#!/usr/bin/env bun`. `npx crossdeps` / `bunx crossdeps` only work if `bun` is on `PATH`. |
+| Config module | Loaded with dynamic `import()`. Must be valid ESM that Bun can import.                                                           |
+| Privileges    | Install commands run as-is. If a command uses `sudo` / `choco` / `brew`, the machine must allow that.                            |
+| Network       | Most catalog commands download installers. Offline machines will fail those commands.                                            |
 
 The library API (`defineConfig`, `detectOs`, …) can be imported from TypeScript that resolves `.ts` exports (Bun, or a bundler). There is no compiled `dist/`.
 
@@ -207,10 +207,10 @@ The loader `import()`s the file and accepts:
 
 ```ts
 // preferred
-export default defineConfig({ deps: { /* ... */ } })
+export default defineConfig({ deps: {/* ... */} })
 
 // also valid
-export const config = defineConfig({ deps: { /* ... */ } })
+export const config = defineConfig({ deps: {/* ... */} })
 
 // also valid (no defineConfig)
 export default {
@@ -236,16 +236,13 @@ and the process exits 1.
 ### `defineConfig`
 
 ```ts
-function defineConfig(options: {
-	packageJsonPath?: string
-	deps: Record<string, SystemDepConfig>
-}): CrossdepsConfig
+function defineConfig(options: { packageJsonPath?: string; deps: Record<string, SystemDepConfig> }): CrossdepsConfig
 ```
 
-| Field | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `deps` | `Record<string, SystemDepConfig>` | required | Map of dep key → config. The key is `{{name}}`. |
-| `packageJsonPath` | `string` | `"package.json"` | Path used by `sync-pm` and the `check` packageManager probe. **Relative to the config file's directory**, not `cwd`. |
+| Field             | Type                              | Default          | Meaning                                                                                                              |
+| ----------------- | --------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `deps`            | `Record<string, SystemDepConfig>` | required         | Map of dep key → config. The key is `{{name}}`.                                                                      |
+| `packageJsonPath` | `string`                          | `"package.json"` | Path used by `sync-pm` and the `check` packageManager probe. **Relative to the config file's directory**, not `cwd`. |
 
 ```ts
 import { defineConfig } from "@lovrozagar/crossdeps"
@@ -279,15 +276,15 @@ interface SystemDepConfig {
 }
 ```
 
-| Field | Required | Example | Meaning |
-| --- | --- | --- | --- |
-| `description` | yes | `"JSON processor"` | Printed by `install` / `check`. Not used for logic. |
-| `required` | yes | `true` | If `true`, a failed `install` of this dep increments Failed and exits 1. If `false`, a failed install is counted as Skipped. Unused by single-target `check` (missing always exits 1). |
-| `version` | yes | `"1.8.1"` or `"latest"` | Interpolated as `{{version}}`. `"latest"` makes `check` treat any detected version as OK, and makes `sync-pm` skip. |
-| `os` | yes | `{ all: "brew install jq" }` | Per-OS install commands. See [OsCommands](#oscommands). |
-| `check` | no | `{ command: "atlas version" }` | Version-check command. Default: `"{{name}} --version"`. Interpolates the same templates as `os`. |
-| `dependsOn` | no | `["node", "npm"]` | Keys that must be installed **before** this one when running `install` with no name. Unknown keys are ignored. |
-| `env` | no | `[{ key: "FOO", value: "bar" }]` | Written by `install` (after a successful install) and by `crossdeps env`. |
+| Field         | Required | Example                          | Meaning                                                                                                                                                                                |
+| ------------- | -------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `description` | yes      | `"JSON processor"`               | Printed by `install` / `check`. Not used for logic.                                                                                                                                    |
+| `required`    | yes      | `true`                           | If `true`, a failed `install` of this dep increments Failed and exits 1. If `false`, a failed install is counted as Skipped. Unused by single-target `check` (missing always exits 1). |
+| `version`     | yes      | `"1.8.1"` or `"latest"`          | Interpolated as `{{version}}`. `"latest"` makes `check` treat any detected version as OK, and makes `sync-pm` skip.                                                                    |
+| `os`          | yes      | `{ all: "brew install jq" }`     | Per-OS install commands. See [OsCommands](#oscommands).                                                                                                                                |
+| `check`       | no       | `{ command: "atlas version" }`   | Version-check command. Default: `"{{name}} --version"`. Interpolates the same templates as `os`.                                                                                       |
+| `dependsOn`   | no       | `["node", "npm"]`                | Keys that must be installed **before** this one when running `install` with no name. Unknown keys are ignored.                                                                         |
+| `env`         | no       | `[{ key: "FOO", value: "bar" }]` | Written by `install` (after a successful install) and by `crossdeps env`.                                                                                                              |
 
 Every field together:
 
@@ -320,12 +317,12 @@ type OsCommands = Partial<Record<OsTarget, string | false>> & { all?: string }
 
 Resolution for a given target:
 
-| `os[target]` | `os.all` | Result |
-| --- | --- | --- |
-| string | anything | that string, interpolated |
-| `false` | anything | unavailable (`null`) |
-| omitted | string | `os.all`, interpolated |
-| omitted | omitted | unavailable (`null`) |
+| `os[target]` | `os.all` | Result                    |
+| ------------ | -------- | ------------------------- |
+| string       | anything | that string, interpolated |
+| `false`      | anything | unavailable (`null`)      |
+| omitted      | string   | `os.all`, interpolated    |
+| omitted      | omitted  | unavailable (`null`)      |
 
 ```ts
 // same command everywhere
@@ -363,12 +360,12 @@ It is not a failure.
 
 Replaced globally (`replace(/\{\{name\}\}/g, …)`) in every `os` command and in `check.command`.
 
-| Token | Source | Example input | Example output |
-| --- | --- | --- | --- |
-| `{{name}}` | dep key | key `stripe-cli` | `stripe-cli` |
-| `{{version}}` | `config.version` as-is | `"22.12.0"` | `22.12.0` |
-| `{{major}}` | first `.` segment of `version`, or the whole string if there is no `.` | `"22.12.0"` → `22`; `"stable"` → `stable` |
-| `{{arch}}` | `process.arch === "arm64" ? "arm64" : "amd64"` | Apple Silicon → `arm64`; `x64` / `ia32` / `arm` → `amd64` |
+| Token         | Source                                                                 | Example input                                             | Example output |
+| ------------- | ---------------------------------------------------------------------- | --------------------------------------------------------- | -------------- |
+| `{{name}}`    | dep key                                                                | key `stripe-cli`                                          | `stripe-cli`   |
+| `{{version}}` | `config.version` as-is                                                 | `"22.12.0"`                                               | `22.12.0`      |
+| `{{major}}`   | first `.` segment of `version`, or the whole string if there is no `.` | `"22.12.0"` → `22`; `"stable"` → `stable`                 |
+| `{{arch}}`    | `process.arch === "arm64" ? "arm64" : "amd64"`                         | Apple Silicon → `arm64`; `x64` / `ia32` / `arm` → `amd64` |
 
 ```ts
 os: {
@@ -392,22 +389,22 @@ interface EnvVar {
 }
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `key` | Variable name (`ANDROID_HOME`, `PATH`, …). For `appendToPath: true` the written line still uses PATH/`$env:Path`; `key` is only for logging. |
-| `value` | Used when `detect` is absent or empty. Written as-is (not expanded by crossdeps). |
-| `detect` | Candidate paths. First path that exists **after expansion** wins. The **original unexpanded** string is what gets written. |
-| `fallback` | Used when every `detect` path is missing. Written as-is. |
-| `appendToPath` | If true, append to PATH instead of `export KEY=value`. |
+| Field          | Meaning                                                                                                                                      |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`          | Variable name (`ANDROID_HOME`, `PATH`, …). For `appendToPath: true` the written line still uses PATH/`$env:Path`; `key` is only for logging. |
+| `value`        | Used when `detect` is absent or empty. Written as-is (not expanded by crossdeps).                                                            |
+| `detect`       | Candidate paths. First path that exists **after expansion** wins. The **original unexpanded** string is what gets written.                   |
+| `fallback`     | Used when every `detect` path is missing. Written as-is.                                                                                     |
+| `appendToPath` | If true, append to PATH instead of `export KEY=value`.                                                                                       |
 
 Path expansion for `detect` existence checks only substitutes:
 
-| Token | Becomes |
-| --- | --- |
-| `$HOME` | `os.homedir()` |
-| `%USERPROFILE%` | `os.homedir()` (case-insensitive) |
-| `%HOME%` | `os.homedir()` (case-insensitive) |
-| `$ANDROID_HOME` | `process.env.ANDROID_HOME` or `""` |
+| Token            | Becomes                            |
+| ---------------- | ---------------------------------- |
+| `$HOME`          | `os.homedir()`                     |
+| `%USERPROFILE%`  | `os.homedir()` (case-insensitive)  |
+| `%HOME%`         | `os.homedir()` (case-insensitive)  |
+| `$ANDROID_HOME`  | `process.env.ANDROID_HOME` or `""` |
 | `%ANDROID_HOME%` | `process.env.ANDROID_HOME` or `""` |
 
 No other `$VAR` / `%VAR%` tokens are expanded.
@@ -421,11 +418,7 @@ Resolution order per `EnvVar`:
 env: [
 	{
 		key: "ANDROID_HOME",
-		detect: [
-			"$HOME/Android/sdk",
-			"$HOME/Library/Android/sdk",
-			"/usr/lib/android-sdk",
-		],
+		detect: ["$HOME/Android/sdk", "$HOME/Library/Android/sdk", "/usr/lib/android-sdk"],
 		fallback: "$HOME/Android/sdk",
 	},
 	{ key: "PATH", appendToPath: true, value: "$ANDROID_HOME/platform-tools" },
@@ -455,11 +448,11 @@ $env:Path += ";$ANDROID_HOME/platform-tools"
 
 Target files:
 
-| Platform | File |
-| --- | --- |
-| Windows | `{homedir}/Documents/PowerShell/Microsoft.PowerShell_profile.ps1` (PowerShell 7, not Windows PowerShell 5 `WindowsPowerShell`) |
-| Unix and `process.env.SHELL` contains `zsh` | `{homedir}/.zshrc` |
-| Other Unix | `{homedir}/.bashrc` |
+| Platform                                    | File                                                                                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Windows                                     | `{homedir}/Documents/PowerShell/Microsoft.PowerShell_profile.ps1` (PowerShell 7, not Windows PowerShell 5 `WindowsPowerShell`) |
+| Unix and `process.env.SHELL` contains `zsh` | `{homedir}/.zshrc`                                                                                                             |
+| Other Unix                                  | `{homedir}/.bashrc`                                                                                                            |
 
 After writing, the CLI prints:
 
@@ -495,12 +488,12 @@ bunx crossdeps <command> [name] [--config <path>] [--os <target>] [--dry-run]
 
 Flags may appear before or after the command. Each flag is stripped once (first occurrence).
 
-| Flag / env | Applies to | Behavior |
-| --- | --- | --- |
-| `--config <path>` | all commands | Required path argument. Must exist. |
-| `--os <target>` | all commands | Must be one of `OS_TARGETS`. Sets `process.env.CROSSDEPS_OS`. Missing value or unknown target → exit 1. |
-| `CROSSDEPS_OS` | all commands | Same as `--os` when `--os` is not passed. |
-| `--dry-run` | `install` only | Prints `dry-run: <command>` and counts the dep as installed. Silently ignored by `check` / `env` / `sync-pm`. |
+| Flag / env        | Applies to     | Behavior                                                                                                      |
+| ----------------- | -------------- | ------------------------------------------------------------------------------------------------------------- |
+| `--config <path>` | all commands   | Required path argument. Must exist.                                                                           |
+| `--os <target>`   | all commands   | Must be one of `OS_TARGETS`. Sets `process.env.CROSSDEPS_OS`. Missing value or unknown target → exit 1.       |
+| `CROSSDEPS_OS`    | all commands   | Same as `--os` when `--os` is not passed.                                                                     |
+| `--dry-run`       | `install` only | Prints `dry-run: <command>` and counts the dep as installed. Silently ignored by `check` / `env` / `sync-pm`. |
 
 ```bash
 bunx crossdeps install
@@ -577,13 +570,13 @@ exit 1.
 
 For each dep in `Object.entries` order (not topo-sorted):
 
-| Situation | Line | Counter |
-| --- | --- | --- |
-| No install command on this OS | `- [required] name — not available on <os>` | none |
-| Check found no version, required | `x [required] name — not installed (expected <ver>)` | Missing |
+| Situation                        | Line                                                 | Counter  |
+| -------------------------------- | ---------------------------------------------------- | -------- |
+| No install command on this OS    | `- [required] name — not available on <os>`          | none     |
+| Check found no version, required | `x [required] name — not installed (expected <ver>)` | Missing  |
 | Check found no version, optional | `x [optional] name — not installed (expected <ver>)` | Mismatch |
-| Version matches (see below) | `v [required] name@<installed>` | OK |
-| Version does not match | `~ [required] name@<installed> (expected <ver>)` | Mismatch |
+| Version matches (see below)      | `v [required] name@<installed>`                      | OK       |
+| Version does not match           | `~ [required] name@<installed> (expected <ver>)`     | Mismatch |
 
 A version **matches** if any of these is true:
 
@@ -596,12 +589,12 @@ Substring either way is intentional so `1.0.1` matches `v1.0.1-1c2aa24-canary` a
 
 Then, if `deps.bun` exists, `check` also probes `package.json` at `resolve(configDir, packageJsonPath)`:
 
-| `deps.bun.version` | `packageManager` | Result |
-| --- | --- | --- |
-| `"latest"` | starts with `bun@` | OK line |
-| `"latest"` | anything else / missing | Mismatch |
-| other | exactly `bun@<version>` | OK line |
-| other | anything else / missing | Mismatch |
+| `deps.bun.version` | `packageManager`        | Result   |
+| ------------------ | ----------------------- | -------- |
+| `"latest"`         | starts with `bun@`      | OK line  |
+| `"latest"`         | anything else / missing | Mismatch |
+| other              | exactly `bun@<version>` | OK line  |
+| other              | anything else / missing | Mismatch |
 
 Missing `package.json` throws (fatal, exit 1).
 
@@ -617,12 +610,12 @@ OK: N  Mismatch: N  Missing: N
 
 **One dep** (`crossdeps check bun`):
 
-| Situation | Output | Exit |
-| --- | --- | --- |
-| Unknown name | `Unknown dependency: …` | 1 |
-| Unavailable on this OS | `bun — not available on <os>` | 0 |
-| No version detected | `bun — not installed (expected <ver>)` | 1 |
-| Any version detected | `bun@<installed> (expected <ver>)` | 0 |
+| Situation              | Output                                 | Exit |
+| ---------------------- | -------------------------------------- | ---- |
+| Unknown name           | `Unknown dependency: …`                | 1    |
+| Unavailable on this OS | `bun — not available on <os>`          | 0    |
+| No version detected    | `bun — not installed (expected <ver>)` | 1    |
+| Any version detected   | `bun@<installed> (expected <ver>)`     | 0    |
 
 Single-target check does **not** apply the match table. Any parsed version is success, even if it disagrees with `config.version`. Single-target check does **not** honor `required: false` for the missing case.
 
@@ -650,14 +643,14 @@ bunx crossdeps sync-pm
 
 Only uses `deps.bun`.
 
-| Condition | Behavior | Exit |
-| --- | --- | --- |
-| No `deps.bun` | `Skipping packageManager sync — bun not in config` | 0 |
-| `deps.bun.version === "latest"` | `Skipping packageManager sync — bun version is "latest"` | 0 |
-| File already has `"packageManager": "bun@<version>"` | `packageManager already correct: bun@<version>` | 0 |
-| File has a different `packageManager` string | String-replaces `"packageManager": "<current>"` with `"packageManager": "bun@<version>"` | 0 |
-| File has no `packageManager` | Injects `,\n\t"packageManager": "bun@<version>"` immediately after `"name": "<pkg.name>"` | 0 |
-| Read/parse/write throws | `Failed to sync packageManager:` + error | 0 from `cmdSyncPm` (the function returns false; `main` does not exit 1) |
+| Condition                                            | Behavior                                                                                  | Exit                                                                    |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| No `deps.bun`                                        | `Skipping packageManager sync — bun not in config`                                        | 0                                                                       |
+| `deps.bun.version === "latest"`                      | `Skipping packageManager sync — bun version is "latest"`                                  | 0                                                                       |
+| File already has `"packageManager": "bun@<version>"` | `packageManager already correct: bun@<version>`                                           | 0                                                                       |
+| File has a different `packageManager` string         | String-replaces `"packageManager": "<current>"` with `"packageManager": "bun@<version>"`  | 0                                                                       |
+| File has no `packageManager`                         | Injects `,\n\t"packageManager": "bun@<version>"` immediately after `"name": "<pkg.name>"` | 0                                                                       |
+| Read/parse/write throws                              | `Failed to sync packageManager:` + error                                                  | 0 from `cmdSyncPm` (the function returns false; `main` does not exit 1) |
 
 `packageJsonPath` is resolved from the **directory that contains the config file**.
 
@@ -696,39 +689,39 @@ Implications:
 
 ### Exit codes
 
-| Situation | Exit |
-| --- | --- |
-| `crossdeps` with no command | 0 |
-| Unknown command | 1 |
-| `--config` / `--os` missing value or bad `--os` | 1 |
-| Config file missing or no `deps` export | 1 |
-| `install` / `check` unknown dep name | 1 |
-| `install` required dep command failed | 1 |
-| `install` optional dep command failed | 0 (counted skipped) |
-| `install` dep unavailable | 0 |
-| `install --dry-run` | 0 |
-| `check` all, required missing | 1 |
-| `check` all, only version / packageManager mismatches | 0 |
-| `check <name>` missing (even optional) | 1 |
-| `check <name>` unavailable | 0 |
-| `env` / `sync-pm` | 0 (sync-pm file errors are logged, not turned into exit 1) |
-| Uncaught exception | 1 (`Fatal error:`) |
+| Situation                                             | Exit                                                       |
+| ----------------------------------------------------- | ---------------------------------------------------------- |
+| `crossdeps` with no command                           | 0                                                          |
+| Unknown command                                       | 1                                                          |
+| `--config` / `--os` missing value or bad `--os`       | 1                                                          |
+| Config file missing or no `deps` export               | 1                                                          |
+| `install` / `check` unknown dep name                  | 1                                                          |
+| `install` required dep command failed                 | 1                                                          |
+| `install` optional dep command failed                 | 0 (counted skipped)                                        |
+| `install` dep unavailable                             | 0                                                          |
+| `install --dry-run`                                   | 0                                                          |
+| `check` all, required missing                         | 1                                                          |
+| `check` all, only version / packageManager mismatches | 0                                                          |
+| `check <name>` missing (even optional)                | 1                                                          |
+| `check <name>` unavailable                            | 0                                                          |
+| `env` / `sync-pm`                                     | 0 (sync-pm file errors are logged, not turned into exit 1) |
+| Uncaught exception                                    | 1 (`Fatal error:`)                                         |
 
 ## OS detection
 
 ```ts
-detectOs(override = process.env.CROSSDEPS_OS)
+detectOs((override = process.env.CROSSDEPS_OS))
 ```
 
-| Input | Result |
-| --- | --- |
+| Input                                    | Result                          |
+| ---------------------------------------- | ------------------------------- |
 | `override` / `CROSSDEPS_OS` / `--os` set | `parseOsTarget(value)` or throw |
-| `process.platform === "darwin"` | `macos` |
-| `process.platform === "win32"` | `windows` |
-| Linux and `apt-get` on PATH | `linux-apt` |
-| Linux and `dnf` on PATH | `linux-dnf` |
-| Linux and `pacman` on PATH | `linux-pacman` |
-| Linux and none of those | `linux-apt` (default) |
+| `process.platform === "darwin"`          | `macos`                         |
+| `process.platform === "win32"`           | `windows`                       |
+| Linux and `apt-get` on PATH              | `linux-apt`                     |
+| Linux and `dnf` on PATH                  | `linux-dnf`                     |
+| Linux and `pacman` on PATH               | `linux-pacman`                  |
+| Linux and none of those                  | `linux-apt` (default)           |
 
 `--os` is implemented by assigning `process.env.CROSSDEPS_OS` before any detect call.
 
@@ -757,18 +750,18 @@ powershell.exe -NoProfile -NonInteractive -Command <command>
 
 Markers (any one is enough):
 
-| Marker | Example that trips it |
-| --- | --- |
-| `\birm\b` | `irm bun.sh/install.ps1 \| iex` |
-| `\biex\b` | same |
-| `$env:` | `Invoke-WebRequest … -OutFile "$env:LOCALAPPDATA\bin\atlas.exe"` |
-| `Invoke-WebRequest` | official Windows binary downloads |
-| `Invoke-Expression` | |
-| `New-Item` | `New-Item -ItemType Directory -Force …` |
-| `Test-Path` | |
-| `Out-Null` | `… \| Out-Null` |
-| `Get-Command` | |
-| `$LASTEXITCODE` | |
+| Marker              | Example that trips it                                            |
+| ------------------- | ---------------------------------------------------------------- |
+| `\birm\b`           | `irm bun.sh/install.ps1 \| iex`                                  |
+| `\biex\b`           | same                                                             |
+| `$env:`             | `Invoke-WebRequest … -OutFile "$env:LOCALAPPDATA\bin\atlas.exe"` |
+| `Invoke-WebRequest` | official Windows binary downloads                                |
+| `Invoke-Expression` |                                                                  |
+| `New-Item`          | `New-Item -ItemType Directory -Force …`                          |
+| `Test-Path`         |                                                                  |
+| `Out-Null`          | `… \| Out-Null`                                                  |
+| `Get-Command`       |                                                                  |
+| `$LASTEXITCODE`     |                                                                  |
 
 Windows, otherwise:
 
@@ -814,25 +807,29 @@ interpolate("{{major}}", "rust", "stable")
 ### `resolveOsCommand(name, config, target)`
 
 ```ts
-resolveOsCommand("git", {
-	description: "git",
-	required: true,
-	version: "2.39.5",
-	os: { all: "echo all", "linux-apt": "apt install git={{version}}" },
-}, "linux-apt")
+resolveOsCommand(
+	"git",
+	{
+		description: "git",
+		required: true,
+		version: "2.39.5",
+		os: { all: "echo all", "linux-apt": "apt install git={{version}}" },
+	},
+	"linux-apt",
+)
 // "apt install git=2.39.5"
 
-resolveOsCommand("flux", { /* os: { all: "…", windows: false } */ }, "windows")
+resolveOsCommand("flux", {/* os: { all: "…", windows: false } */}, "windows")
 // null
 ```
 
 ### `resolveCheckCommand(name, config)`
 
 ```ts
-resolveCheckCommand("node", { /* no check */ })
+resolveCheckCommand("node", {/* no check */})
 // "node --version"
 
-resolveCheckCommand("atlas", { check: { command: "{{name}} version {{version}}" }, version: "1.2.3", /* … */ })
+resolveCheckCommand("atlas", { check: { command: "{{name}} version {{version}}" }, version: "1.2.3" /* … */ })
 // "atlas version 1.2.3"
 ```
 
@@ -840,8 +837,8 @@ resolveCheckCommand("atlas", { check: { command: "{{name}} version {{version}}" 
 
 ```ts
 sortByDependencies([
-	["npm", { dependsOn: ["node"], /* … */ }],
-	["node", { /* … */ }],
+	["npm", { dependsOn: ["node"] /* … */ }],
+	["node", {/* … */}],
 ])
 // [["node", …], ["npm", …]]
 ```
@@ -853,17 +850,17 @@ sortByDependencies([
 ### `parseOsTarget(value)`
 
 ```ts
-parseOsTarget("macos")        // "macos"
-parseOsTarget("freebsd")      // throws Error("Unknown OS target: freebsd. Expected one of: …")
+parseOsTarget("macos") // "macos"
+parseOsTarget("freebsd") // throws Error("Unknown OS target: freebsd. Expected one of: …")
 ```
 
 ### `detectOsFromPlatform(platform, override?)`
 
 ```ts
-detectOsFromPlatform("darwin")                         // "macos"
-detectOsFromPlatform("win32")                          // "windows"
-detectOsFromPlatform("linux", "linux-dnf")             // "linux-dnf"
-detectOsFromPlatform("linux")                          // linux-apt / linux-dnf / linux-pacman / linux-apt default
+detectOsFromPlatform("darwin") // "macos"
+detectOsFromPlatform("win32") // "windows"
+detectOsFromPlatform("linux", "linux-dnf") // "linux-dnf"
+detectOsFromPlatform("linux") // linux-apt / linux-dnf / linux-pacman / linux-apt default
 ```
 
 ### `detectOs(override?)`
@@ -873,9 +870,9 @@ detectOsFromPlatform("linux")                          // linux-apt / linux-dnf 
 ### `commandLookup(command, platform = process.platform)`
 
 ```ts
-commandLookup("bun", "win32")   // "where bun >nul 2>&1"
-commandLookup("bun", "linux")   // "command -v bun >/dev/null 2>&1"
-commandLookup("bun", "darwin")  // "command -v bun >/dev/null 2>&1"
+commandLookup("bun", "win32") // "where bun >nul 2>&1"
+commandLookup("bun", "linux") // "command -v bun >/dev/null 2>&1"
+commandLookup("bun", "darwin") // "command -v bun >/dev/null 2>&1"
 ```
 
 ### `commandExists(command)`
@@ -883,7 +880,7 @@ commandLookup("bun", "darwin")  // "command -v bun >/dev/null 2>&1"
 `true` if the (optionally quoted) path exists on disk, or if `commandLookup` succeeds.
 
 ```ts
-commandExists("sh")                 // true on Unix
+commandExists("sh") // true on Unix
 commandExists("/usr/local/bin/node")
 commandExists('"/usr/local/bin/node"')
 commandExists("crossdeps-not-real") // false
@@ -1026,7 +1023,7 @@ Prints the Windows command strings. Does not run them. Does not write env. Does 
 import { defineConfig } from "@lovrozagar/crossdeps"
 export const systemDeps = defineConfig({
 	packageJsonPath: "../package.json",
-	deps: { bun: { /* … */ } },
+	deps: { bun: {/* … */} },
 })
 ```
 
@@ -1091,23 +1088,23 @@ npm run setup:deps:sync-pm
 
 ## Gotchas
 
-| Trap | What actually happens |
-| --- | --- |
-| `install <name>` of a dep with `dependsOn` | Dependents are **not** installed. |
-| Tool already installed at the wrong version | `install` skips. Change the check, uninstall manually, or live with `check` mismatch. |
-| `--dry-run` to "see what would skip" | Dry-run never checks installed versions. Everything with a command is "installed". |
-| Check command that prints no `N.N` | Treated as not installed. Install will run every time. |
-| `check <optional-dep>` when missing | Exit 1. `required: false` only changes all-deps `install` / `check`. |
-| `{{arch}}` on `x64` | `amd64`, not `x64`. |
-| Linux without apt/dnf/pacman | Detected as `linux-apt`. |
-| `os.windows` uses `\|\|` plus `$env:` | Routed to PowerShell; `\|\|` is wrong. Keep cmd syntax and PowerShell syntax in separate commands. |
-| `env.detect` writes the resolved path | No. It writes the template (`$HOME/...`). |
-| Extra env tokens in `detect` (`$XDG_DATA_HOME`) | Not expanded. Existence check looks for a literal `$XDG_DATA_HOME/…` path. |
-| `sync-pm` for node | Not implemented. Only `deps.bun`. |
-| `packageJsonPath` relative to cwd | No. Relative to the config file directory. |
-| Import `@lovrozagar/crossdeps/env` | Not exported. Use the CLI or copy the idea. |
-| JSON config | Not supported. |
-| Walking parent dirs for config | Not supported. Run from the directory that contains the file, or pass `--config`. |
+| Trap                                            | What actually happens                                                                              |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `install <name>` of a dep with `dependsOn`      | Dependents are **not** installed.                                                                  |
+| Tool already installed at the wrong version     | `install` skips. Change the check, uninstall manually, or live with `check` mismatch.              |
+| `--dry-run` to "see what would skip"            | Dry-run never checks installed versions. Everything with a command is "installed".                 |
+| Check command that prints no `N.N`              | Treated as not installed. Install will run every time.                                             |
+| `check <optional-dep>` when missing             | Exit 1. `required: false` only changes all-deps `install` / `check`.                               |
+| `{{arch}}` on `x64`                             | `amd64`, not `x64`.                                                                                |
+| Linux without apt/dnf/pacman                    | Detected as `linux-apt`.                                                                           |
+| `os.windows` uses `\|\|` plus `$env:`           | Routed to PowerShell; `\|\|` is wrong. Keep cmd syntax and PowerShell syntax in separate commands. |
+| `env.detect` writes the resolved path           | No. It writes the template (`$HOME/...`).                                                          |
+| Extra env tokens in `detect` (`$XDG_DATA_HOME`) | Not expanded. Existence check looks for a literal `$XDG_DATA_HOME/…` path.                         |
+| `sync-pm` for node                              | Not implemented. Only `deps.bun`.                                                                  |
+| `packageJsonPath` relative to cwd               | No. Relative to the config file directory.                                                         |
+| Import `@lovrozagar/crossdeps/env`              | Not exported. Use the CLI or copy the idea.                                                        |
+| JSON config                                     | Not supported.                                                                                     |
+| Walking parent dirs for config                  | Not supported. Run from the directory that contains the file, or pass `--config`.                  |
 
 ## Repository layout
 
@@ -1148,17 +1145,17 @@ Docker cannot boot macOS or Windows. Those kernels are covered by GitHub Actions
 
 ## Lint and format
 
-Same setup as [oat](https://github.com/lovrozagar/oat): [oxlint](https://oxc.rs/docs/guide/usage/linter.html) and [oxfmt](https://oxc.rs/docs/guide/usage/formatter.html). Config is `.oxlintrc.json` and `.oxfmtrc.jsonc`.
+Lint and format with [oxlint](https://oxc.rs/docs/guide/usage/linter.html) and [oxfmt](https://oxc.rs/docs/guide/usage/formatter.html). Config is `.oxlintrc.json` and `.oxfmtrc.jsonc`.
 
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) on `main` and pull requests:
 
-| Job | What it runs |
-| --- | --- |
-| `test` | lint + format check (Linux) + unit + consumer tests on Ubuntu, macOS, Windows |
-| `docker` | apt / dnf / pacman install-path tests |
-| `catalog-install` | real `crossdeps install` of the 24-dep catalog on those three OSes |
+| Job               | What it runs                                                                  |
+| ----------------- | ----------------------------------------------------------------------------- |
+| `test`            | lint + format check (Linux) + unit + consumer tests on Ubuntu, macOS, Windows |
+| `docker`          | apt / dnf / pacman install-path tests                                         |
+| `catalog-install` | real `crossdeps install` of the 24-dep catalog on those three OSes            |
 
 ## Releases
 
@@ -1168,14 +1165,14 @@ There is no `NPM_TOKEN`. npm authenticates with GitHub OIDC. Configure the trust
 
 [npmjs.com/package/@lovrozagar/crossdeps](https://www.npmjs.com/package/@lovrozagar/crossdeps) → Settings → Trusted Publisher → GitHub Actions
 
-| Field | Value |
-| --- | --- |
-| Publisher | GitHub Actions |
-| Organization or user | `lovrozagar` |
-| Repository | `crossdeps` |
-| Workflow filename | `release.yml` |
-| Environment name | empty |
-| Allowed actions | Allow npm publish |
+| Field                | Value             |
+| -------------------- | ----------------- |
+| Publisher            | GitHub Actions    |
+| Organization or user | `lovrozagar`      |
+| Repository           | `crossdeps`       |
+| Workflow filename    | `release.yml`     |
+| Environment name     | empty             |
+| Allowed actions      | Allow npm publish |
 
 Publishing access on that page: **Require two-factor authentication or a granular access token with bypass 2fa enabled**. Trusted publishers still work with that option.
 
