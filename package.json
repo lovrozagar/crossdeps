@@ -21,6 +21,7 @@
 		"test": "bun run --filter @scriptgun/crossdeps test",
 		"test:consumers": "bun test e2e/app/tests",
 		"test:e2e:docker": "bash e2e/docker/run.sh",
+		"test:catalog-install": "bun e2e/catalog-install.ts",
 		"test:watch": "bun run --filter @scriptgun/crossdeps test:watch",
 		"typecheck": "bun run --filter @scriptgun/crossdeps type:check",
 		"typecheck:consumers": "bun run --filter './examples/*' type:check && bun run --filter @crossdeps/e2e-app type:check"
