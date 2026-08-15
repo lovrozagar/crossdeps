@@ -1104,6 +1104,12 @@ npm run setup:deps:sync-pm
 | JSON config | Not supported. |
 | Walking parent dirs for config | Not supported. Run from the directory that contains the file, or pass `--config`. |
 
+## Releases
+
+GitHub Releases match npm versions. Pushing a tag `vX.Y.Z` (same as this `package.json` `version`) runs the repo [`.github/workflows/release.yml`](https://github.com/lovrozagar/crossdeps/blob/main/.github/workflows/release.yml): test, `npm publish` via trusted publishing, GitHub Packages, then a GitHub Release.
+
+Configure the trusted publisher once on this package (Settings → Trusted Publisher → GitHub Actions): repository `lovrozagar/crossdeps`, workflow `release.yml`, no environment, allow npm publish. Do not put an npm token in GitHub secrets.
+
 ## Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md).
@@ -1111,3 +1117,4 @@ See [CHANGELOG.md](./CHANGELOG.md).
 ## License
 
 MIT
+

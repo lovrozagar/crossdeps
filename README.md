@@ -39,6 +39,7 @@ This README is the full usage contract. If you are an agent, read it end to end 
 - [Develop](#develop)
 - [Lint and format](#lint-and-format)
 - [CI](#ci)
+- [Releases](#releases)
 - [Changelog](#changelog)
 - [License](#license)
 
@@ -1159,7 +1160,41 @@ GitHub Actions (`.github/workflows/ci.yml`) on `main` and pull requests:
 | `docker` | apt / dnf / pacman install-path tests |
 | `catalog-install` | real `crossdeps install` of the 24-dep catalog on those three OSes |
 
-There is no auto-publish workflow. npm releases are manual from `packages/core`.
+## Releases
+
+The published package is [`@lovrozagar/crossdeps`](https://www.npmjs.com/package/@lovrozagar/crossdeps). GitHub Releases match that version. Pushing a tag `vX.Y.Z` (same as `packages/core/package.json` `version`) runs [`.github/workflows/release.yml`](./.github/workflows/release.yml): unit + typecheck + consumer tests, `npm publish` via trusted publishing, GitHub Packages, then a GitHub Release.
+
+There is no `NPM_TOKEN`. npm authenticates with GitHub OIDC. Configure the trusted publisher **once** on the package (not on honey):
+
+[npmjs.com/package/@lovrozagar/crossdeps](https://www.npmjs.com/package/@lovrozagar/crossdeps) → Settings → Trusted Publisher → GitHub Actions
+
+| Field | Value |
+| --- | --- |
+| Publisher | GitHub Actions |
+| Organization or user | `lovrozagar` |
+| Repository | `crossdeps` |
+| Workflow filename | `release.yml` |
+| Environment name | empty |
+| Allowed actions | Allow npm publish |
+
+Publishing access on that page: **Require two-factor authentication or a granular access token with bypass 2fa enabled**. Trusted publishers still work with that option.
+
+Ship a version:
+
+```bash
+# 1. set packages/core/package.json version to X.Y.Z and update CHANGELOG
+git add packages/core/package.json packages/core/CHANGELOG.md
+git commit -m "chore: release X.Y.Z"
+git push origin main
+
+# 2. tag the same version — this starts the Release workflow
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+You can also run the `Release` workflow by hand (`workflow_dispatch`) and pass the existing tag (`v0.1.0`). The tag must match `packages/core/package.json`. If that version is already on npm, publish is skipped and the GitHub Release is still created.
+
+Do not put an npm token in repo secrets. The classic 2FA-bypass token path is being restricted; OIDC is the publish path.
 
 ## Changelog
 
