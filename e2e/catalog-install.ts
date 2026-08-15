@@ -95,5 +95,6 @@ if (summary) {
 	await Bun.write(summary, `# Catalog install (${process.platform})\n\n${table}\n`)
 }
 
-/* tried every dep — non-zero only if the runner itself could not start any */
+/* any failed/timed-out dep fails the job so leftover reds are visible */
+if (failed + timeout > 0) process.exit(1)
 if (ok === 0) process.exit(1)
