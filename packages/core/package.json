@@ -9,17 +9,14 @@
 		"installer",
 		"system"
 	],
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/lovrozagar/crossdeps.git"
-	},
 	"homepage": "https://github.com/lovrozagar/crossdeps#readme",
 	"bugs": {
 		"url": "https://github.com/lovrozagar/crossdeps/issues"
 	},
-	"publishConfig": {
-		"access": "public"
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/lovrozagar/crossdeps.git"
 	},
 	"bin": {
 		"crossdeps": "./src/cli.ts"
@@ -31,6 +28,9 @@
 	"sideEffects": false,
 	"exports": {
 		".": "./src/index.ts"
+	},
+	"publishConfig": {
+		"access": "public"
 	},
 	"scripts": {
 		"test": "vitest run",

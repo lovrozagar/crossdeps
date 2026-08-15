@@ -133,6 +133,16 @@ function fetchArchiveToDir(): string {
 	return `bun -e ${JSON.stringify(`const dest=process.env.DEST; const url=process.env.URL; const archive=dest+".dl"; const res=await fetch(url); if(!res.ok) throw new Error("download failed "+res.status+" "+url); await Bun.write(archive, await res.arrayBuffer()); const {execSync}=await import("node:child_process"); const {dirname}=await import("node:path"); execSync("tar -xf "+JSON.stringify(archive)+" -C "+JSON.stringify(dirname(dest)), {stdio:"inherit"});`)}`
 }
 
+function allOs(cmd: string) {
+	return {
+		"linux-apt": cmd,
+		"linux-dnf": cmd,
+		"linux-pacman": cmd,
+		macos: cmd,
+		windows: cmd,
+	}
+}
+
 describe("real install", () => {
 	test("downloads jq, stripe-cli, and cloudflared when CROSSDEPS_REAL_INSTALL=1", async () => {
 		if (process.env.CROSSDEPS_REAL_INSTALL !== "1") return
@@ -171,13 +181,6 @@ describe("real install", () => {
 
 		const fileCmd = fetchToEnv()
 		const archiveCmd = fetchArchiveToDir()
-		const all = (cmd: string) => ({
-			"linux-apt": cmd,
-			"linux-dnf": cmd,
-			"linux-pacman": cmd,
-			macos: cmd,
-			windows: cmd,
-		})
 
 		writeFileSync(
 			join(dir, "crossdeps.config.ts"),
@@ -186,21 +189,21 @@ describe("real install", () => {
 		cloudflared: {
 			check: { command: ${JSON.stringify(`${cfDest} --version`)} },
 			description: "Cloudflare Tunnel client",
-			os: ${JSON.stringify(all(os === "macos" ? archiveCmd : fileCmd))},
+			os: ${JSON.stringify(allOs(os === "macos" ? archiveCmd : fileCmd))},
 			required: true,
 			version: "2026.2.0",
 		},
 		jq: {
 			check: { command: ${JSON.stringify(`${jqDest} --version`)} },
 			description: "JSON processor",
-			os: ${JSON.stringify(all(fileCmd))},
+			os: ${JSON.stringify(allOs(fileCmd))},
 			required: true,
 			version: "1.8.1",
 		},
 		"stripe-cli": {
 			check: { command: ${JSON.stringify(`${stripeDest} version`)} },
 			description: "Stripe CLI",
-			os: ${JSON.stringify(all(archiveCmd))},
+			os: ${JSON.stringify(allOs(archiveCmd))},
 			required: true,
 			version: "1.35.0",
 		},

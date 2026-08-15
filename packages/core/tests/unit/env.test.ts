@@ -1,13 +1,6 @@
 import { join, resolve } from "node:path"
 import { describe, expect, it } from "vitest"
-import {
-	applyEnvBlock,
-	expandPath,
-	reloadHint,
-	renderEnvBlock,
-	shellConfigPath,
-	shellKind,
-} from "../../src/env.ts"
+import { applyEnvBlock, expandPath, reloadHint, renderEnvBlock, shellConfigPath, shellKind } from "../../src/env.ts"
 
 describe("shellKind", () => {
 	it("uses PowerShell on Windows", () => {
@@ -47,12 +40,8 @@ describe("expandPath", () => {
 
 	it("expands ANDROID_HOME from either syntax", () => {
 		const env = { ANDROID_HOME: "/sdk" }
-		expect(expandPath("$ANDROID_HOME/platform-tools", "/home/me", env)).toBe(
-			"/sdk/platform-tools",
-		)
-		expect(expandPath("%ANDROID_HOME%\\platform-tools", "C:\\Users\\me", env)).toBe(
-			"/sdk\\platform-tools",
-		)
+		expect(expandPath("$ANDROID_HOME/platform-tools", "/home/me", env)).toBe("/sdk/platform-tools")
+		expect(expandPath("%ANDROID_HOME%\\platform-tools", "C:\\Users\\me", env)).toBe("/sdk\\platform-tools")
 	})
 })
 
@@ -73,8 +62,8 @@ describe("renderEnvBlock", () => {
 
 	it("emits PowerShell assignments", () => {
 		const block = renderEnvBlock("tool", envs, "powershell")
-		expect(block).toContain("$env:TOOL_HOME = \"$HOME/tool\"")
-		expect(block).toContain("$env:Path += \";$HOME/tool/bin\"")
+		expect(block).toContain('$env:TOOL_HOME = "$HOME/tool"')
+		expect(block).toContain('$env:Path += ";$HOME/tool/bin"')
 		expect(block).toContain("\r\n")
 	})
 })

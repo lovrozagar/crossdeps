@@ -142,10 +142,10 @@ describe("CLI dry-run of the monorepo catalog", () => {
 	})
 
 	test("dry-run --os windows marks dnsmasq unavailable and uses choco for git", async () => {
-		const result = await runCli(
-			["install", "--dry-run", "--os", "windows", "--config", catalogPath],
-			{ cwd: catalogDir, env: { CROSSDEPS_OS: undefined } },
-		)
+		const result = await runCli(["install", "--dry-run", "--os", "windows", "--config", catalogPath], {
+			cwd: catalogDir,
+			env: { CROSSDEPS_OS: undefined },
+		})
 		expect(result.exitCode).toBe(0)
 		expect(result.stdout).toContain("dnsmasq@2.92 — not available on windows")
 		expect(result.stdout).toContain("choco install git --version=2.39.5")
@@ -154,10 +154,10 @@ describe("CLI dry-run of the monorepo catalog", () => {
 	})
 
 	test("dry-run --os macos uses brew and darwin node tarball", async () => {
-		const result = await runCli(
-			["install", "--dry-run", "--os", "macos", "--config", catalogPath],
-			{ cwd: catalogDir, env: { CROSSDEPS_OS: undefined } },
-		)
+		const result = await runCli(["install", "--dry-run", "--os", "macos", "--config", catalogPath], {
+			cwd: catalogDir,
+			env: { CROSSDEPS_OS: undefined },
+		})
 		expect(result.exitCode).toBe(0)
 		expect(result.stdout).toContain("brew install git")
 		expect(result.stdout).toContain("node-v22.12.0-darwin-")

@@ -98,11 +98,7 @@ async function loadConfig(configPath: string): Promise<CrossdepsConfig> {
 	const mod = (await import(configPath)) as Record<string, unknown>
 
 	/* support: export default defineConfig(...) */
-	if (
-		mod.default &&
-		typeof mod.default === "object" &&
-		"deps" in (mod.default as Record<string, unknown>)
-	) {
+	if (mod.default && typeof mod.default === "object" && "deps" in (mod.default as Record<string, unknown>)) {
 		return mod.default as CrossdepsConfig
 	}
 
@@ -121,7 +117,7 @@ function execCommand(command: string, ignoreError = false): boolean {
 	try {
 		runShellCommand(command)
 		return true
-	} catch (_error) {
+	} catch {
 		if (!ignoreError) {
 			console.error(`\nCommand failed: ${command}`)
 		}
@@ -255,11 +251,7 @@ function installOne(
 	return "failed"
 }
 
-function cmdInstall(
-	deps: Record<string, SystemDepConfig>,
-	target: string | undefined,
-	dryRun = false,
-): void {
+function cmdInstall(deps: Record<string, SystemDepConfig>, target: string | undefined, dryRun = false): void {
 	const os = detectOs()
 
 	if (target) {
@@ -284,9 +276,7 @@ function cmdInstall(
 	for (const [name, config] of entries) {
 		const badge = config.required ? "[required]" : "[optional]"
 		const available = resolveOsCommand(name, config, os) !== null
-		console.log(
-			`  ${badge} ${name}@${config.version}${available ? "" : ` (not available on ${os})`}`,
-		)
+		console.log(`  ${badge} ${name}@${config.version}${available ? "" : ` (not available on ${os})`}`)
 	}
 
 	console.log(`\n${"=".repeat(50)}`)
@@ -455,11 +445,7 @@ function cmdEnv(deps: Record<string, SystemDepConfig>): void {
 	console.log(`\n${reloadHint(kind, configPath.split(/[\\/]/).pop() ?? "")}`)
 }
 
-function cmdSyncPm(
-	deps: Record<string, SystemDepConfig>,
-	configDir: string,
-	packageJsonPath: string,
-): boolean {
+function cmdSyncPm(deps: Record<string, SystemDepConfig>, configDir: string, packageJsonPath: string): boolean {
 	const bunConfig = deps.bun
 	if (!bunConfig) {
 		console.log("\nSkipping packageManager sync — bun not in config")
@@ -490,10 +476,7 @@ function cmdSyncPm(
 		const pkgName = pkg.name as string
 		const updated = current
 			? content.replace(`"packageManager": "${current}"`, `"packageManager": "${expected}"`)
-			: content.replace(
-					`"name": "${pkgName}"`,
-					`"name": "${pkgName}",\n\t"packageManager": "${expected}"`,
-				)
+			: content.replace(`"name": "${pkgName}"`, `"name": "${pkgName}",\n\t"packageManager": "${expected}"`)
 		writeFileSync(pkgJsonPath, updated)
 		console.log(`Updated packageManager to ${expected}`)
 		return true

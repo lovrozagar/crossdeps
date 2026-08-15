@@ -79,11 +79,7 @@ export function interpolate(template: string, name: string, version: string): st
  * Resolve the install command for a dep on a given OS target.
  * Returns the interpolated command, or null if unavailable.
  */
-export function resolveOsCommand(
-	name: string,
-	config: SystemDepConfig,
-	target: OsTarget,
-): string | null {
+export function resolveOsCommand(name: string, config: SystemDepConfig, target: OsTarget): string | null {
 	const specific = config.os[target]
 
 	/* explicitly unavailable */

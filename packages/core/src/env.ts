@@ -41,15 +41,9 @@ export function renderEnvBlock(
 	const lines = ["", start]
 	for (const env of envs) {
 		if (env.appendToPath) {
-			lines.push(
-				kind === "powershell"
-					? `$env:Path += ";${env.value}"`
-					: `export PATH="$PATH:${env.value}"`,
-			)
+			lines.push(kind === "powershell" ? `$env:Path += ";${env.value}"` : `export PATH="$PATH:${env.value}"`)
 		} else {
-			lines.push(
-				kind === "powershell" ? `$env:${env.key} = "${env.value}"` : `export ${env.key}="${env.value}"`,
-			)
+			lines.push(kind === "powershell" ? `$env:${env.key} = "${env.value}"` : `export ${env.key}="${env.value}"`)
 		}
 	}
 	lines.push(end, "")

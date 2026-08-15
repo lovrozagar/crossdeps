@@ -89,7 +89,7 @@ fi`,
 				"linux-pacman": "curl -sSf https://atlasgo.sh | sh -s -- --version v{{version}}",
 				macos: "curl -sSf https://atlasgo.sh | sh -s -- --version v{{version}}",
 				windows:
-					"New-Item -ItemType Directory -Force \"$env:LOCALAPPDATA\\bin\" | Out-Null; Invoke-WebRequest -UseBasicParsing https://release.ariga.io/atlas/atlas-windows-amd64-latest.exe -OutFile \"$env:LOCALAPPDATA\\bin\\atlas.exe\"",
+					'New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\\bin" | Out-Null; Invoke-WebRequest -UseBasicParsing https://release.ariga.io/atlas/atlas-windows-amd64-latest.exe -OutFile "$env:LOCALAPPDATA\\bin\\atlas.exe"',
 			},
 			required: true,
 			version: "v1.0.1-1c2aa24-canary",
@@ -128,7 +128,7 @@ fi`,
 					"curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /tmp/cloudflared && chmod +x /tmp/cloudflared && sudo mv /tmp/cloudflared /usr/local/bin/cloudflared",
 				macos: "brew install cloudflared",
 				windows:
-					"New-Item -ItemType Directory -Force \"$env:LOCALAPPDATA\\bin\" | Out-Null; Invoke-WebRequest -UseBasicParsing https://github.com/cloudflare/cloudflared/releases/download/{{version}}/cloudflared-windows-amd64.exe -OutFile \"$env:LOCALAPPDATA\\bin\\cloudflared.exe\"",
+					'New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\\bin" | Out-Null; Invoke-WebRequest -UseBasicParsing https://github.com/cloudflare/cloudflared/releases/download/{{version}}/cloudflared-windows-amd64.exe -OutFile "$env:LOCALAPPDATA\\bin\\cloudflared.exe"',
 			},
 			required: true,
 			version: "2026.2.0",
@@ -149,7 +149,7 @@ fi`,
 				"linux-pacman": 'curl -fsSL https://deno.land/install.sh | sh -s "v{{version}}"',
 				macos: 'curl -fsSL https://deno.land/install.sh | sh -s "v{{version}}"',
 				windows:
-					"irm https://deno.land/install.ps1 | iex; if (Test-Path \"$env:USERPROFILE\\.deno\\bin\") { $env:Path = \"$env:USERPROFILE\\.deno\\bin;$env:Path\" }",
+					'irm https://deno.land/install.ps1 | iex; if (Test-Path "$env:USERPROFILE\\.deno\\bin") { $env:Path = "$env:USERPROFILE\\.deno\\bin;$env:Path" }',
 			},
 			required: true,
 			version: "2.7.5",
@@ -203,7 +203,7 @@ fi`,
 				"linux-pacman": "sudo pacman -S --noconfirm firefox",
 				macos: "brew install --cask firefox",
 				windows:
-					"Invoke-WebRequest -UseBasicParsing \"https://download.mozilla.org/?product=firefox-latest-ssl&os=win64&lang=en-US\" -OutFile \"$env:TEMP\\firefox-setup.exe\"; Start-Process \"$env:TEMP\\firefox-setup.exe\" -ArgumentList \"-ms\" -Wait",
+					'Invoke-WebRequest -UseBasicParsing "https://download.mozilla.org/?product=firefox-latest-ssl&os=win64&lang=en-US" -OutFile "$env:TEMP\\firefox-setup.exe"; Start-Process "$env:TEMP\\firefox-setup.exe" -ArgumentList "-ms" -Wait',
 			},
 			required: true,
 			version: "145.0",
@@ -218,7 +218,7 @@ fi`,
 				"linux-pacman": false,
 				macos: "brew install --cask flux",
 				windows:
-					"Invoke-WebRequest -UseBasicParsing https://justgetflux.com/flux-setup.exe -OutFile \"$env:TEMP\\flux-setup.exe\"; Start-Process \"$env:TEMP\\flux-setup.exe\" -ArgumentList \"/S\" -Wait",
+					'Invoke-WebRequest -UseBasicParsing https://justgetflux.com/flux-setup.exe -OutFile "$env:TEMP\\flux-setup.exe"; Start-Process "$env:TEMP\\flux-setup.exe" -ArgumentList "/S" -Wait',
 			},
 			required: false,
 			version: "42.1",
@@ -257,11 +257,10 @@ fi`,
 			os: {
 				"linux-apt":
 					"curl -fsSL https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o /tmp/chrome.deb && sudo dpkg -i /tmp/chrome.deb && sudo apt-get install -f -y && rm /tmp/chrome.deb",
-				"linux-dnf":
-					"sudo dnf install -y https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm",
+				"linux-dnf": "sudo dnf install -y https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm",
 				macos: "brew install --cask google-chrome",
 				windows:
-					"Invoke-WebRequest -UseBasicParsing https://dl.google.com/chrome/install/latest/chrome_installer.exe -OutFile \"$env:TEMP\\chrome_installer.exe\"; Start-Process \"$env:TEMP\\chrome_installer.exe\" -ArgumentList \"/silent\",\"/install\" -Wait",
+					'Invoke-WebRequest -UseBasicParsing https://dl.google.com/chrome/install/latest/chrome_installer.exe -OutFile "$env:TEMP\\chrome_installer.exe"; Start-Process "$env:TEMP\\chrome_installer.exe" -ArgumentList "/silent","/install" -Wait',
 			},
 			required: true,
 			version: "142.0.7444.162",
@@ -322,8 +321,7 @@ fi`,
 		},
 		"playwright-deps": {
 			check: {
-				command:
-					"dpkg -s libavif16 2>/dev/null | grep -q 'Status: install ok installed' && echo ok",
+				command: "dpkg -s libavif16 2>/dev/null | grep -q 'Status: install ok installed' && echo ok",
 			},
 			description: "System libraries required by Playwright browsers (WebKit, Chromium, Firefox)",
 			os: {
@@ -391,8 +389,7 @@ fi`,
 					"sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf",
 				"linux-dnf":
 					"sudo dnf install -y webkit2gtk4.1-devel gtk3-devel libayatana-appindicator-gtk3 librsvg2-devel patchelf",
-				"linux-pacman":
-					"sudo pacman -S --noconfirm webkit2gtk-4.1 gtk3 libayatana-appindicator librsvg patchelf",
+				"linux-pacman": "sudo pacman -S --noconfirm webkit2gtk-4.1 gtk3 libayatana-appindicator librsvg patchelf",
 				macos: "echo 'No extra deps needed — macOS uses system WebKit'",
 				windows: "echo 'No extra deps needed — Windows uses WebView2'",
 			},

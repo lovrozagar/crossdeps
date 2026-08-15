@@ -4,9 +4,7 @@ import type { SystemDepConfig } from "./config.ts"
  * Topological sort of deps respecting `dependsOn` field.
  * Returns dep names in install order.
  */
-export function sortByDependencies(
-	depEntries: Array<[string, SystemDepConfig]>,
-): Array<[string, SystemDepConfig]> {
+export function sortByDependencies(depEntries: Array<[string, SystemDepConfig]>): Array<[string, SystemDepConfig]> {
 	const nameSet = new Set(depEntries.map(([name]) => name))
 	const sorted: Array<[string, SystemDepConfig]> = []
 	const visited = new Set<string>()

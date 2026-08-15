@@ -1,8 +1,6 @@
 import { execFileSync, execSync } from "node:child_process"
 
-export type ShellInvocation =
-	| { args: string[]; file: string }
-	| { command: string; shell: string }
+export type ShellInvocation = { args: string[]; file: string } | { command: string; shell: string }
 
 const POWERSHELL_MARKERS = [
 	/\birm\b/i,
@@ -21,10 +19,7 @@ export function needsPowerShell(command: string): boolean {
 	return POWERSHELL_MARKERS.some((re) => re.test(command))
 }
 
-export function shellInvocation(
-	command: string,
-	platform: NodeJS.Platform = process.platform,
-): ShellInvocation {
+export function shellInvocation(command: string, platform: NodeJS.Platform = process.platform): ShellInvocation {
 	if (platform === "win32") {
 		if (needsPowerShell(command)) {
 			return {

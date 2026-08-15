@@ -20,6 +20,7 @@ This repo is the source of the [`@scriptgun/crossdeps`](https://www.npmjs.com/pa
 - [OS detection](#os-detection)
 - [Repository layout](#repository-layout)
 - [Develop](#develop)
+- [Lint and format](#lint-and-format)
 - [CI](#ci)
 - [Changelog](#changelog)
 - [License](#license)
@@ -213,17 +214,24 @@ bun run test:e2e:docker      # OS matrix in Docker
 bun run test:catalog-install # real catalog install on this machine
 bun run typecheck
 bun run typecheck:consumers
+bun run lint                 # oxlint
+bun run fmt                  # oxfmt
+bun run fmt:check
 ```
+
+## Lint and format
+
+Same setup as [oat](https://github.com/lovrozagar/oat): [oxlint](https://oxc.rs/docs/guide/usage/linter.html) and [oxfmt](https://oxc.rs/docs/guide/usage/formatter.html). Config is `.oxlintrc.json` and `.oxfmtrc.jsonc`.
 
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) on `main` and pull requests:
 
-| Job | What it runs |
-| --- | --- |
-| `test` | unit + consumer tests on Ubuntu, macOS, Windows |
-| `docker` | apt / dnf / pacman install-path tests |
-| `catalog-install` | real `crossdeps install` of the 24-dep catalog on those three OSes |
+| Job               | What it runs                                                                  |
+| ----------------- | ----------------------------------------------------------------------------- |
+| `test`            | lint + format check (Linux) + unit + consumer tests on Ubuntu, macOS, Windows |
+| `docker`          | apt / dnf / pacman install-path tests                                         |
+| `catalog-install` | real `crossdeps install` of the 24-dep catalog on those three OSes            |
 
 There is no auto-publish workflow. npm releases are manual from `packages/core`.
 

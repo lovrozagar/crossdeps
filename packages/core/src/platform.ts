@@ -7,9 +7,7 @@ import { existsSync } from "node:fs"
 import { OS_TARGETS, type OsTarget } from "./config.ts"
 
 export function commandLookup(command: string, platform: NodeJS.Platform = process.platform): string {
-	return platform === "win32"
-		? `where ${command} >nul 2>&1`
-		: `command -v ${command} >/dev/null 2>&1`
+	return platform === "win32" ? `where ${command} >nul 2>&1` : `command -v ${command} >/dev/null 2>&1`
 }
 
 export function commandExists(command: string): boolean {

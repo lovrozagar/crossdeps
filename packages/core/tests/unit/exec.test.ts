@@ -4,12 +4,8 @@ import { needsPowerShell, shellInvocation } from "../../src/exec.ts"
 describe("needsPowerShell", () => {
 	it("detects PowerShell-only syntax", () => {
 		expect(needsPowerShell("irm https://deno.land/install.ps1 | iex")).toBe(true)
-		expect(needsPowerShell('Invoke-WebRequest -OutFile "$env:LOCALAPPDATA\\bin\\atlas.exe"')).toBe(
-			true,
-		)
-		expect(needsPowerShell("choco install nginx --version=1.29.4 || choco install nginx")).toBe(
-			false,
-		)
+		expect(needsPowerShell('Invoke-WebRequest -OutFile "$env:LOCALAPPDATA\\bin\\atlas.exe"')).toBe(true)
+		expect(needsPowerShell("choco install nginx --version=1.29.4 || choco install nginx")).toBe(false)
 		expect(needsPowerShell('bun -e "await Bun.write(process.env.MARKER, \\"ok\\")"')).toBe(false)
 	})
 })

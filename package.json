@@ -2,8 +2,6 @@
 	"name": "crossdeps-monorepo",
 	"version": "0.0.1",
 	"private": true,
-	"type": "module",
-	"packageManager": "bun@1.3.11",
 	"workspaces": {
 		"packages": [
 			"packages/*",
@@ -12,10 +10,13 @@
 		],
 		"catalog": {
 			"@types/node": "26.1.1",
+			"oxfmt": "0.63.0",
+			"oxlint": "1.78.0",
 			"typescript": "7.0.2",
 			"vitest": "4.1.10"
 		}
 	},
+	"type": "module",
 	"scripts": {
 		"test": "bun run --filter @scriptgun/crossdeps test",
 		"test:consumers": "bun test e2e/app/tests",
@@ -23,6 +24,15 @@
 		"test:catalog-install": "bun e2e/catalog-install.ts",
 		"test:watch": "bun run --filter @scriptgun/crossdeps test:watch",
 		"typecheck": "bun run --filter @scriptgun/crossdeps type:check",
-		"typecheck:consumers": "bun run --filter './examples/*' type:check && bun run --filter @crossdeps/e2e-app type:check"
-	}
+		"typecheck:consumers": "bun run --filter './examples/*' type:check && bun run --filter @crossdeps/e2e-app type:check",
+		"lint": "oxlint",
+		"lint:fix": "oxlint --fix",
+		"fmt": "oxfmt",
+		"fmt:check": "oxfmt --check"
+	},
+	"devDependencies": {
+		"oxfmt": "0.63.0",
+		"oxlint": "1.78.0"
+	},
+	"packageManager": "bun@1.3.11"
 }

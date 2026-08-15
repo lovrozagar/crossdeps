@@ -1,10 +1,4 @@
-import {
-	detectOs,
-	interpolate,
-	resolveCheckCommand,
-	resolveOsCommand,
-	sortByDependencies,
-} from "@scriptgun/crossdeps"
+import { detectOs, interpolate, resolveCheckCommand, resolveOsCommand, sortByDependencies } from "@scriptgun/crossdeps"
 import config from "../crossdeps.config.ts"
 
 export function bunInstallCommand(): string | null {

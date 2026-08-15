@@ -14,9 +14,7 @@ function dep(overrides: Partial<SystemDepConfig> = {}): SystemDepConfig {
 
 describe("interpolate", () => {
 	it("replaces name, version, and major", () => {
-		expect(interpolate("{{name}}@{{version}} ({{major}})", "node", "22.12.0")).toBe(
-			"node@22.12.0 (22)",
-		)
+		expect(interpolate("{{name}}@{{version}} ({{major}})", "node", "22.12.0")).toBe("node@22.12.0 (22)")
 	})
 
 	it("replaces arch with a known value", () => {
@@ -46,19 +44,11 @@ describe("resolveOsCommand", () => {
 	})
 
 	it("falls back to all when the OS key is omitted", () => {
-		expect(resolveOsCommand("bun", dep({ os: { all: "install {{name}}" } }), "macos")).toBe(
-			"install bun",
-		)
+		expect(resolveOsCommand("bun", dep({ os: { all: "install {{name}}" } }), "macos")).toBe("install bun")
 	})
 
 	it("returns null when the OS is explicitly unavailable", () => {
-		expect(
-			resolveOsCommand(
-				"dnsmasq",
-				dep({ os: { all: "install dnsmasq", windows: false } }),
-				"windows",
-			),
-		).toBeNull()
+		expect(resolveOsCommand("dnsmasq", dep({ os: { all: "install dnsmasq", windows: false } }), "windows")).toBeNull()
 	})
 
 	it("returns null when neither the OS key nor all is set", () => {
@@ -72,12 +62,9 @@ describe("resolveCheckCommand", () => {
 	})
 
 	it("interpolates a custom check command", () => {
-		expect(
-			resolveCheckCommand(
-				"atlas",
-				dep({ check: { command: "{{name}} version {{version}}" } }),
-			),
-		).toBe("atlas version 1.2.3")
+		expect(resolveCheckCommand("atlas", dep({ check: { command: "{{name}} version {{version}}" } }))).toBe(
+			"atlas version 1.2.3",
+		)
 	})
 })
 
