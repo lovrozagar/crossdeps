@@ -23,6 +23,7 @@ node_modules
 .cache/
 .project/
 
-# environment
+# environment — never commit secrets or local env templates
 .env
 .env.*
+.env.example
