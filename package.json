@@ -18,7 +18,7 @@
 	},
 	"type": "module",
 	"scripts": {
-		"prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
+		"prepare": "git config --get core.hooksPath >/dev/null || git config core.hooksPath .githooks || true",
 		"test": "bun run --filter @lovrozagar/crossdeps test",
 		"test:consumers": "bun test e2e/app/tests",
 		"test:e2e:docker": "bash e2e/docker/run.sh",
