@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-08-14
 
-- Standalone monorepo: published package in `packages/core`, consumers in `examples/` and `e2e/`
+- Standalone monorepo: published package in `packages/core`
 - CLI flags: `--os`, `--dry-run`
 - Windows: PowerShell for `irm` / `$env:` commands, `cmd.exe` otherwise
 - `env` writes the PowerShell 7 profile on Windows
