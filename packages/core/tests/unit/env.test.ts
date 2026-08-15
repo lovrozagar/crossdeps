@@ -1,3 +1,4 @@
+import { join, resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import {
 	applyEnvBlock,
@@ -21,17 +22,20 @@ describe("shellKind", () => {
 
 describe("shellConfigPath", () => {
 	it("writes the PowerShell 7 profile on Windows", () => {
-		expect(shellConfigPath("/Users/me", "powershell")).toBe(
-			"/Users/me/Documents/PowerShell/Microsoft.PowerShell_profile.ps1",
+		const home = join("Users", "me")
+		expect(shellConfigPath(home, "powershell")).toBe(
+			resolve(home, "Documents", "PowerShell", "Microsoft.PowerShell_profile.ps1"),
 		)
 	})
 
 	it("writes .zshrc for zsh", () => {
-		expect(shellConfigPath("/home/me", "posix", "/bin/zsh")).toBe("/home/me/.zshrc")
+		const home = join("home", "me")
+		expect(shellConfigPath(home, "posix", "/bin/zsh")).toBe(resolve(home, ".zshrc"))
 	})
 
 	it("writes .bashrc otherwise", () => {
-		expect(shellConfigPath("/home/me", "posix", "/bin/bash")).toBe("/home/me/.bashrc")
+		const home = join("home", "me")
+		expect(shellConfigPath(home, "posix", "/bin/bash")).toBe(resolve(home, ".bashrc"))
 	})
 })
 
