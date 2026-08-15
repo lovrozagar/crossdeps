@@ -2,7 +2,7 @@ import { execFileSync, execSync } from "node:child_process"
 
 export type ShellInvocation =
 	| { args: string[]; file: string }
-	| { command: string; shell: string | true }
+	| { command: string; shell: string }
 
 const POWERSHELL_MARKERS = [
 	/\birm\b/i,
@@ -33,7 +33,7 @@ export function shellInvocation(
 			}
 		}
 		/* cmd.exe so bun -e / choco / || keep working */
-		return { command, shell: true }
+		return { command, shell: process.env.ComSpec || "cmd.exe" }
 	}
 	return { command, shell: "/bin/bash" }
 }

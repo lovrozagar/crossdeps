@@ -31,9 +31,11 @@ describe("shellInvocation", () => {
 	})
 
 	it("uses cmd.exe for bun/choco on Windows", () => {
-		expect(shellInvocation("choco install nginx || choco install nginx", "win32")).toEqual({
+		const inv = shellInvocation("choco install nginx || choco install nginx", "win32")
+		expect(inv).toMatchObject({
 			command: "choco install nginx || choco install nginx",
-			shell: true,
 		})
+		expect("shell" in inv && typeof inv.shell === "string").toBe(true)
+		if ("shell" in inv) expect(inv.shell.toLowerCase()).toContain("cmd")
 	})
 })
