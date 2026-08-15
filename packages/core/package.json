@@ -1,0 +1,42 @@
+{
+	"name": "@scriptgun/crossdeps",
+	"version": "0.1.0",
+	"description": "Cross-platform system dependency manager. Define deps in a config file, run crossdeps install.",
+	"keywords": [
+		"cli",
+		"cross-platform",
+		"dependencies",
+		"installer",
+		"system"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/lovrozagar/crossdeps.git"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"bin": {
+		"crossdeps": "./src/cli.ts"
+	},
+	"files": [
+		"src"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"type:check": "tsc --noEmit -p tsconfig.src.json",
+		"type:check:tests": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

@@ -1,0 +1,16 @@
+{
+	"name": "@crossdeps/e2e-app",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "bun test tests",
+		"type:check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@scriptgun/crossdeps": "workspace:*"
+	},
+	"devDependencies": {
+		"typescript": "catalog:"
+	}
+}

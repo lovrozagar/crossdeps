@@ -1,0 +1,17 @@
+{
+	"name": "@crossdeps/example-consumer",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"setup:deps": "crossdeps install",
+		"setup:deps:check": "crossdeps check",
+		"type:check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@scriptgun/crossdeps": "workspace:*"
+	},
+	"devDependencies": {
+		"typescript": "catalog:"
+	}
+}

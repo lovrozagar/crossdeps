@@ -1,0 +1,23 @@
+# dependencies
+node_modules
+**/node_modules
+
+# build
+**/dist/
+**/*.tsbuildinfo
+
+# testing
+**/coverage/
+**/test-results/
+
+# editor / os
+.DS_Store
+*.swp
+*.log
+
+# local
+.local
+*.local
+.tmp
+.temp
+.cache/

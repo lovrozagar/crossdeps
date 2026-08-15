@@ -1,0 +1,65 @@
+services:
+  linux-apt:
+    image: crossdeps-e2e-apt
+    build:
+      context: ../..
+      dockerfile: e2e/docker/linux-apt.Dockerfile
+    working_dir: /src
+    volumes:
+      - ../..:/src
+    environment:
+      EXPECT_OS: linux-apt
+      CROSSDEPS_REAL_INSTALL: "1"
+    command: ["bun", "test", "e2e/app/tests/os-install.test.ts"]
+
+  linux-dnf:
+    image: crossdeps-e2e-dnf
+    build:
+      context: ../..
+      dockerfile: e2e/docker/linux-dnf.Dockerfile
+    working_dir: /src
+    volumes:
+      - ../..:/src
+    environment:
+      EXPECT_OS: linux-dnf
+      CROSSDEPS_REAL_INSTALL: "1"
+    command: ["bun", "test", "e2e/app/tests/os-install.test.ts"]
+
+  linux-pacman:
+    image: crossdeps-e2e-pacman
+    build:
+      context: ../..
+      dockerfile: e2e/docker/linux-pacman.Dockerfile
+    working_dir: /src
+    volumes:
+      - ../..:/src
+    environment:
+      EXPECT_OS: linux-pacman
+      CROSSDEPS_REAL_INSTALL: "1"
+    command: ["bun", "test", "e2e/app/tests/os-install.test.ts"]
+
+  windows:
+    image: crossdeps-e2e-apt
+    build:
+      context: ../..
+      dockerfile: e2e/docker/linux-apt.Dockerfile
+    working_dir: /src
+    volumes:
+      - ../..:/src
+    environment:
+      CROSSDEPS_OS: windows
+      EXPECT_OS: windows
+    command: ["bun", "test", "e2e/app/tests/os-install.test.ts"]
+
+  macos:
+    image: crossdeps-e2e-apt
+    build:
+      context: ../..
+      dockerfile: e2e/docker/linux-apt.Dockerfile
+    working_dir: /src
+    volumes:
+      - ../..:/src
+    environment:
+      CROSSDEPS_OS: macos
+      EXPECT_OS: macos
+    command: ["bun", "test", "e2e/app/tests/os-install.test.ts"]
