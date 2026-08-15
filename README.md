@@ -57,8 +57,11 @@ import { defineConfig } from "@scriptgun/crossdeps"
 
 ```bash
 npx crossdeps install
+npx crossdeps install --dry-run
 npx crossdeps check
 ```
+
+`examples/consumer/crossdeps.config.ts` is the full monorepo catalog (24 deps). Consumer tests dry-run every OS command and, when `CROSSDEPS_REAL_INSTALL=1`, download `jq`, `stripe-cli`, and `cloudflared`.
 
 ## License
 

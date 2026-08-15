@@ -44,6 +44,7 @@ Commands:
 Flags:
   --config <path>      Config file (default: crossdeps.config.ts in cwd)
   --os <target>        Force OS target (or set CROSSDEPS_OS)
+  --dry-run            Print install commands without running them
 `
 
 /**
@@ -84,6 +85,12 @@ function stripFlag(args: string[], flag: string): { args: string[]; value: strin
 		args: [...args.slice(0, idx), ...args.slice(idx + 2)],
 		value: args[idx + 1],
 	}
+}
+
+function stripBoolFlag(args: string[], flag: string): { args: string[]; present: boolean } {
+	const idx = args.indexOf(flag)
+	if (idx === -1) return { args, present: false }
+	return { args: [...args.slice(0, idx), ...args.slice(idx + 1)], present: true }
 }
 
 async function loadConfig(configPath: string): Promise<CrossdepsConfig> {
@@ -211,6 +218,7 @@ function installOne(
 	name: string,
 	config: SystemDepConfig,
 	os: OsTarget,
+	dryRun = false,
 ): "installed" | "skipped" | "failed" | "unavailable" {
 	const command = resolveOsCommand(name, config, os)
 
@@ -221,6 +229,11 @@ function installOne(
 
 	console.log(`${name}@${config.version}`)
 	console.log(`   ${config.description}`)
+
+	if (dryRun) {
+		console.log(`   dry-run: ${command}`)
+		return "installed"
+	}
 
 	const installed = getInstalledVersion(name, config)
 	if (installed) {
@@ -241,7 +254,11 @@ function installOne(
 	return "failed"
 }
 
-function cmdInstall(deps: Record<string, SystemDepConfig>, target: string | undefined): void {
+function cmdInstall(
+	deps: Record<string, SystemDepConfig>,
+	target: string | undefined,
+	dryRun = false,
+): void {
 	const os = detectOs()
 
 	if (target) {
@@ -252,7 +269,7 @@ function cmdInstall(deps: Record<string, SystemDepConfig>, target: string | unde
 			process.exit(1)
 		}
 		console.log(`Detected OS: ${os}`)
-		const result = installOne(target, config, os)
+		const result = installOne(target, config, os, dryRun)
 		if (result === "failed") process.exit(1)
 		return
 	}
@@ -272,7 +289,7 @@ function cmdInstall(deps: Record<string, SystemDepConfig>, target: string | unde
 	}
 
 	console.log(`\n${"=".repeat(50)}`)
-	console.log("Installing dependencies...")
+	console.log(dryRun ? "Dry-run — commands only, nothing installed" : "Installing dependencies...")
 	console.log("=".repeat(50))
 
 	let installed = 0
@@ -281,7 +298,7 @@ function cmdInstall(deps: Record<string, SystemDepConfig>, target: string | unde
 	let unavailable = 0
 
 	for (const [name, config] of entries) {
-		const result = installOne(name, config, os)
+		const result = installOne(name, config, os, dryRun)
 
 		if (result === "installed") installed++
 		else if (result === "skipped") skipped++
@@ -507,13 +524,15 @@ async function main(): Promise<void> {
 	const deps = config.deps
 	const packageJsonPath = config.packageJsonPath ?? "package.json"
 
-	const args = stripFlag(osFlag.args, "--config").args
+	const configStripped = stripFlag(osFlag.args, "--config")
+	const dry = stripBoolFlag(configStripped.args, "--dry-run")
+	const args = dry.args
 	const command = args[0]
 	const target = args[1]
 
 	switch (command) {
 		case "install":
-			cmdInstall(deps, target)
+			cmdInstall(deps, target, dry.present)
 			break
 		case "check":
 			cmdCheck(deps, configDir, packageJsonPath, target)

@@ -71,6 +71,9 @@ npx crossdeps install --config ./my-config.ts
 
 # Force an OS target (also: CROSSDEPS_OS=windows)
 npx crossdeps install --os windows
+
+# Print commands without installing
+npx crossdeps install --dry-run
 ```
 
 ## Package.json Integration

@@ -125,58 +125,109 @@ describe("OS install matrix", () => {
 	})
 })
 
+function fetchToEnv(): string {
+	return `bun -e ${JSON.stringify(`const dest=process.env.DEST; const res=await fetch(process.env.URL); if(!res.ok) throw new Error("download failed "+res.status+" "+process.env.URL); await Bun.write(dest, await res.arrayBuffer()); const {chmodSync}=await import("node:fs"); chmodSync(dest, 0o755);`)}`
+}
+
+function fetchArchiveToDir(): string {
+	return `bun -e ${JSON.stringify(`const dest=process.env.DEST; const url=process.env.URL; const archive=dest+".dl"; const res=await fetch(url); if(!res.ok) throw new Error("download failed "+res.status+" "+url); await Bun.write(archive, await res.arrayBuffer()); const {execSync}=await import("node:child_process"); const {dirname}=await import("node:path"); execSync("tar -xf "+JSON.stringify(archive)+" -C "+JSON.stringify(dirname(dest)), {stdio:"inherit"});`)}`
+}
+
 describe("real install", () => {
-	test("downloads jq when CROSSDEPS_REAL_INSTALL=1", async () => {
+	test("downloads jq, stripe-cli, and cloudflared when CROSSDEPS_REAL_INSTALL=1", async () => {
 		if (process.env.CROSSDEPS_REAL_INSTALL !== "1") return
 
 		const os = detectOs()
-		const dir = mkdtempSync(join(tmpdir(), "crossdeps-jq-"))
+		const dir = mkdtempSync(join(tmpdir(), "crossdeps-bins-"))
 		const bindir = join(dir, "bin")
 		mkdirSync(bindir)
-		const arch = process.arch === "arm64" ? "arm64" : "amd64"
-		const asset =
+		const cpu = process.arch === "arm64" ? "arm64" : "amd64"
+		const stripeArch = process.arch === "arm64" ? "arm64" : "x86_64"
+		const exe = os === "windows" ? ".exe" : ""
+
+		const jqDest = join(bindir, `jq${exe}`)
+		const jqUrl =
 			os === "windows"
-				? "jq-windows-amd64.exe"
+				? "https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-windows-amd64.exe"
 				: os === "macos"
-					? `jq-macos-${arch}`
-					: `jq-linux-${arch}`
-		const dest = join(bindir, os === "windows" ? "jq.exe" : "jq")
-		const url = `https://github.com/jqlang/jq/releases/download/jq-1.8.1/${asset}`
-		const download = `bun -e ${JSON.stringify(`const dest=process.env.JQ_BIN; const res=await fetch(process.env.JQ_URL); if(!res.ok) throw new Error("download failed "+res.status); await Bun.write(dest, await res.arrayBuffer()); const {chmodSync}=await import("node:fs"); chmodSync(dest, 0o755);`)}`
+					? `https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-macos-${cpu}`
+					: `https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-${cpu}`
+
+		const stripeDest = join(bindir, os === "windows" ? "stripe.exe" : "stripe")
+		const stripeUrl =
+			os === "windows"
+				? "https://github.com/stripe/stripe-cli/releases/download/v1.35.0/stripe_1.35.0_windows_x86_64.zip"
+				: os === "macos"
+					? `https://github.com/stripe/stripe-cli/releases/download/v1.35.0/stripe_1.35.0_mac-os_${stripeArch}.tar.gz`
+					: `https://github.com/stripe/stripe-cli/releases/download/v1.35.0/stripe_1.35.0_linux_${stripeArch}.tar.gz`
+
+		const cfDest = join(bindir, `cloudflared${exe}`)
+		const cfUrl =
+			os === "windows"
+				? "https://github.com/cloudflare/cloudflared/releases/download/2026.2.0/cloudflared-windows-amd64.exe"
+				: os === "macos"
+					? `https://github.com/cloudflare/cloudflared/releases/download/2026.2.0/cloudflared-darwin-${cpu}.tgz`
+					: `https://github.com/cloudflare/cloudflared/releases/download/2026.2.0/cloudflared-linux-${cpu}`
+
+		const fileCmd = fetchToEnv()
+		const archiveCmd = fetchArchiveToDir()
+		const all = (cmd: string) => ({
+			"linux-apt": cmd,
+			"linux-dnf": cmd,
+			"linux-pacman": cmd,
+			macos: cmd,
+			windows: cmd,
+		})
 
 		writeFileSync(
 			join(dir, "crossdeps.config.ts"),
 			`export default {
 	deps: {
+		cloudflared: {
+			check: { command: ${JSON.stringify(`${cfDest} --version`)} },
+			description: "Cloudflare Tunnel client",
+			os: ${JSON.stringify(all(os === "macos" ? archiveCmd : fileCmd))},
+			required: true,
+			version: "2026.2.0",
+		},
 		jq: {
-			check: { command: ${JSON.stringify(`${dest} --version`)} },
+			check: { command: ${JSON.stringify(`${jqDest} --version`)} },
 			description: "JSON processor",
-			os: {
-				"linux-apt": ${JSON.stringify(download)},
-				"linux-dnf": ${JSON.stringify(download)},
-				"linux-pacman": ${JSON.stringify(download)},
-				macos: ${JSON.stringify(download)},
-				windows: ${JSON.stringify(download)},
-			},
+			os: ${JSON.stringify(all(fileCmd))},
 			required: true,
 			version: "1.8.1",
+		},
+		"stripe-cli": {
+			check: { command: ${JSON.stringify(`${stripeDest} version`)} },
+			description: "Stripe CLI",
+			os: ${JSON.stringify(all(archiveCmd))},
+			required: true,
+			version: "1.35.0",
 		},
 	},
 }
 `,
 		)
 
-		const install = await runCli(["install", "jq", "--config", join(dir, "crossdeps.config.ts")], {
-			cwd: dir,
-			env: { JQ_BIN: dest, JQ_URL: url },
-		})
-		expect(install.exitCode).toBe(0)
-		expect(install.stdout).toContain("Installed successfully")
+		const tools = [
+			{ dest: jqDest, name: "jq", url: jqUrl },
+			{ dest: stripeDest, name: "stripe-cli", url: stripeUrl },
+			{ dest: cfDest, name: "cloudflared", url: cfUrl },
+		]
 
-		const check = await runCli(["check", "jq", "--config", join(dir, "crossdeps.config.ts")], {
-			cwd: dir,
-		})
-		expect(check.exitCode).toBe(0)
-		expect(check.stdout).toContain("jq@1.8.1")
-	})
+		for (const tool of tools) {
+			const install = await runCli(["install", tool.name, "--config", join(dir, "crossdeps.config.ts")], {
+				cwd: dir,
+				env: { DEST: tool.dest, URL: tool.url },
+			})
+			expect(install.exitCode, tool.name).toBe(0)
+			expect(install.stdout, tool.name).toContain("Installed successfully")
+
+			const check = await runCli(["check", tool.name, "--config", join(dir, "crossdeps.config.ts")], {
+				cwd: dir,
+			})
+			expect(check.exitCode, tool.name).toBe(0)
+			expect(check.stdout, tool.name).toContain(`${tool.name === "stripe-cli" ? "stripe-cli" : tool.name}@`)
+		}
+	}, 120_000)
 })
