@@ -35,7 +35,7 @@ export default defineConfig({
 		bun: {
 			description: "JavaScript runtime and package manager",
 			required: true,
-			version: "1.3.5",
+			version: "1.3.11",
 			os: {
 				all: 'curl -fsSL https://bun.sh/install | bash -s "bun-v{{version}}"',
 				windows: 'powershell -c "irm bun.sh/install.ps1|iex" && bun upgrade --to {{version}}',
@@ -169,7 +169,11 @@ import {
 
 Auto-detects: `macos`, `linux-apt`, `linux-dnf`, `linux-pacman`, `windows`.
 
-Linux distro detection uses package manager availability (`apt-get`, `dnf`, `pacman`).
+Linux distro detection uses package manager availability (`apt-get`, `dnf`, `pacman`). Override with `--os <target>` or `CROSSDEPS_OS`.
+
+On Windows, PowerShell-looking commands (`irm`, `$env:`, `Invoke-WebRequest`, …) run in PowerShell. Everything else runs in `cmd.exe` so `choco` and `bun -e` keep working.
+
+`crossdeps env` writes `~/.bashrc` / `~/.zshrc` on Unix and the PowerShell 7 profile on Windows.
 
 ## Changelog
 

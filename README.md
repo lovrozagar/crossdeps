@@ -1,19 +1,62 @@
-# crossdeps
+# @scriptgun/crossdeps
 
-Cross-platform system dependency manager. Define deps in a config file, run `crossdeps install`.
+Define system dependencies in a config file. Install them on any OS with one command.
 
-This repo is the source of the `@scriptgun/crossdeps` npm package.
+This repo is the source of the [`@scriptgun/crossdeps`](https://www.npmjs.com/package/@scriptgun/crossdeps) npm package.
+
+## Start
+
+```bash
+bun add -D @scriptgun/crossdeps
+```
+
+```ts
+import { defineConfig } from "@scriptgun/crossdeps"
+
+export default defineConfig({
+	deps: {
+		bun: {
+			description: "JavaScript runtime and package manager",
+			os: {
+				all: 'curl -fsSL https://bun.sh/install | bash -s "bun-v{{version}}"',
+				windows: 'powershell -c "irm bun.sh/install.ps1|iex" && bun upgrade --to {{version}}',
+			},
+			required: true,
+			version: "1.3.11",
+		},
+		git: {
+			description: "Version control system",
+			os: {
+				"linux-apt": "sudo apt-get install -y git",
+				macos: "brew install git",
+				windows: "choco install git --version={{version}}",
+			},
+			required: true,
+			version: "2.39.5",
+		},
+	},
+})
+```
+
+```bash
+bunx crossdeps install
+bunx crossdeps check
+bunx crossdeps install --dry-run
+```
+
+Full CLI, config reference, and library API: [`packages/core/README.md`](packages/core/README.md).
 
 ## Layout
 
 ```
 packages/core     published package (@scriptgun/crossdeps)
-examples/*        consumer apps used while iterating
-e2e/app           consumer that imports the package over workspace:*
-e2e/docker        local OS matrix (linux distros + windows/macos command paths)
+examples/consumer sample app + the 24-dep catalog
+e2e/app           consumer tests over workspace:*
+e2e/docker        Linux distro matrix (apt / dnf / pacman)
+e2e/catalog-install.ts   real install of the catalog (CI)
 ```
 
-`packages/core` is the only published workspace. Examples and `e2e/app` are the consumer proof — they import `@scriptgun/crossdeps` over `workspace:*` the way a real app would.
+`packages/core` is the only published workspace. Consumers import `@scriptgun/crossdeps` over `workspace:*`.
 
 ## Develop
 
@@ -21,47 +64,15 @@ Requires [Bun](https://bun.sh) 1.3+.
 
 ```bash
 bun install
-bun run test                 # core unit tests (default CI)
-bun run test:consumers       # e2e-app imports and runs the CLI like a real app
-bun run test:e2e:docker      # install matrix in Docker (needs Docker)
-bun run typecheck            # core src (TypeScript 7)
-bun run typecheck:consumers  # examples + e2e-app
+bun run test                 # core unit tests
+bun run test:consumers       # e2e-app + catalog dry-run
+bun run test:e2e:docker      # OS matrix in Docker
+bun run test:catalog-install # real catalog install on this machine
+bun run typecheck
+bun run typecheck:consumers
 ```
 
-CI `test` runs on `ubuntu-latest`, `windows-latest`, and `macos-latest` — those are real Windows and macOS machines. Locally, `test:e2e:docker` covers Linux distros plus Windows/macOS command paths:
-
-| Service | What actually runs |
-| --- | --- |
-| `linux-apt` | Debian + real `detectOs()` + real `jq` download |
-| `linux-dnf` | Fedora + real `detectOs()` + real `jq` download |
-| `linux-pacman` | Arch + real `detectOs()` + real `jq` download |
-| `windows` | Debian with `CROSSDEPS_OS=windows` — selects the Windows command, does not boot Windows |
-| `macos` | Debian with `CROSSDEPS_OS=macos` — selects the macOS command, does not boot macOS |
-
-Docker cannot run macOS, and Windows containers need a Windows host. Real Windows and macOS execution is the GitHub Actions matrix.
-
-Single target:
-
-```bash
-bash e2e/docker/run.sh linux-apt
-bash e2e/docker/run.sh windows macos
-```
-
-## Package
-
-Consumers import `defineConfig` and the library helpers, then run the `crossdeps` CLI.
-
-```ts
-import { defineConfig } from "@scriptgun/crossdeps"
-```
-
-```bash
-npx crossdeps install
-npx crossdeps install --dry-run
-npx crossdeps check
-```
-
-`examples/consumer/crossdeps.config.ts` is the full monorepo catalog (24 deps). Consumer tests dry-run every OS command and, when `CROSSDEPS_REAL_INSTALL=1`, download `jq`, `stripe-cli`, and `cloudflared`.
+CI runs unit + consumer tests on `ubuntu-latest`, `windows-latest`, and `macos-latest`, a Docker Linux matrix, and a full catalog install on those three GitHub-hosted OSes.
 
 ## License
 
