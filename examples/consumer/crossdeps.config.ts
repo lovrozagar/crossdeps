@@ -225,13 +225,13 @@ fi`,
 			description: "Ethereum development toolkit (forge, cast, anvil)",
 			os: {
 				"linux-apt":
-					'curl -L https://foundry.paradigm.xyz | bash && export PATH="$HOME/.foundry/bin:$PATH" && foundryup --install {{version}}',
+					'curl -L https://foundry.paradigm.xyz | bash && for d in "$HOME/.foundry/bin" "${XDG_CONFIG_HOME:-$HOME/.config}/.foundry/bin"; do [ -x "$d/foundryup" ] && export PATH="$d:$PATH" && break; done && (foundryup --install {{version}} || foundryup)',
 				"linux-dnf":
-					'curl -L https://foundry.paradigm.xyz | bash && export PATH="$HOME/.foundry/bin:$PATH" && foundryup --install {{version}}',
+					'curl -L https://foundry.paradigm.xyz | bash && for d in "$HOME/.foundry/bin" "${XDG_CONFIG_HOME:-$HOME/.config}/.foundry/bin"; do [ -x "$d/foundryup" ] && export PATH="$d:$PATH" && break; done && (foundryup --install {{version}} || foundryup)',
 				"linux-pacman":
-					'curl -L https://foundry.paradigm.xyz | bash && export PATH="$HOME/.foundry/bin:$PATH" && foundryup --install {{version}}',
+					'curl -L https://foundry.paradigm.xyz | bash && for d in "$HOME/.foundry/bin" "${XDG_CONFIG_HOME:-$HOME/.config}/.foundry/bin"; do [ -x "$d/foundryup" ] && export PATH="$d:$PATH" && break; done && (foundryup --install {{version}} || foundryup)',
 				macos:
-					'curl -L https://foundry.paradigm.xyz | bash && export PATH="$HOME/.foundry/bin:$PATH" && foundryup --install {{version}}',
+					'curl -L https://foundry.paradigm.xyz | bash && for d in "$HOME/.foundry/bin" "${XDG_CONFIG_HOME:-$HOME/.config}/.foundry/bin"; do [ -x "$d/foundryup" ] && export PATH="$d:$PATH" && break; done && (foundryup --install {{version}} || foundryup)',
 			},
 			required: true,
 			version: "stable",

@@ -82,7 +82,7 @@ describe("OS install matrix", () => {
 			cwd: dir,
 			env: { MARKER: marker },
 		})
-		expect(result.exitCode).toBe(0)
+		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
 		expect(result.stdout).toContain("Installed successfully")
 		expect(readFileSync(marker, "utf-8")).toBe(os)
 	})
@@ -96,7 +96,7 @@ describe("OS install matrix", () => {
 			cwd: dir,
 			env: { CROSSDEPS_OS: undefined, MARKER: marker },
 		})
-		expect(result.exitCode).toBe(0)
+		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
 		expect(result.stdout).toContain("Installed successfully")
 		expect(readFileSync(marker, "utf-8")).toBe("windows")
 	})
@@ -220,7 +220,7 @@ describe("real install", () => {
 				cwd: dir,
 				env: { DEST: tool.dest, URL: tool.url },
 			})
-			expect(install.exitCode, tool.name).toBe(0)
+			expect(install.exitCode, `${tool.name}\n${install.stdout}\n${install.stderr}`).toBe(0)
 			expect(install.stdout, tool.name).toContain("Installed successfully")
 
 			const check = await runCli(["check", tool.name, "--config", join(dir, "crossdeps.config.ts")], {

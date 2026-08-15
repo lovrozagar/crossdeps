@@ -105,7 +105,7 @@ describe("CLI as a workspace consumer", () => {
 			cwd: dir,
 			env: { MARKER: marker },
 		})
-		expect(result.exitCode).toBe(0)
+		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
 		expect(result.stdout).toContain("Installed successfully")
 		expect(readFileSync(marker, "utf-8")).toBe("fresh-ok")
 	})
@@ -140,7 +140,7 @@ describe("CLI as a workspace consumer", () => {
 			cwd: dir,
 			env: { MARKER: marker },
 		})
-		expect(result.exitCode).toBe(0)
+		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
 		expect(readFileSync(marker, "utf-8")).toBe("parentchild")
 	})
 
