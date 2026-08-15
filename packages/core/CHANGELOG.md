@@ -1,16 +1,12 @@
 # Changelog
 
-## 0.2.0 - 2026-08-14
+## 0.1.0 - 2026-08-15
 
-- Standalone monorepo: published package in `packages/core`
-- CLI flags: `--os`, `--dry-run`
+First public release of `@lovrozagar/crossdeps`.
+
+- Config-driven system dependency manager (`install`, `check`, `env`, `sync-pm`)
+- CLI flags: `--config`, `--os`, `--dry-run`
+- OS targets: macOS, Linux (apt / dnf / pacman), Windows
 - Windows: PowerShell for `irm` / `$env:` commands, `cmd.exe` otherwise
-- `env` writes the PowerShell 7 profile on Windows
+- `env` writes `~/.bashrc` / `~/.zshrc` on Unix and the PowerShell 7 profile on Windows
 - Catalog proven on GitHub-hosted Ubuntu, macOS, and Windows (24/24)
-
-## 0.1.0 - 2026-02-09
-
-- Initial public release
-- Config-driven system dependency management
-- Cross-platform support (macOS, Linux)
-- Commands: install, check, env, sync-pm

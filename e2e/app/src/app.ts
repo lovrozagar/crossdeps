@@ -5,7 +5,7 @@ import {
 	resolveCheckCommand,
 	resolveOsCommand,
 	sortByDependencies,
-} from "@scriptgun/crossdeps"
+} from "@lovrozagar/crossdeps"
 import config from "../crossdeps.config.ts"
 
 export { config }

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, test } from "bun:test"
-import { detectOs, OS_TARGETS, resolveOsCommand } from "@scriptgun/crossdeps"
+import { detectOs, OS_TARGETS, resolveOsCommand } from "@lovrozagar/crossdeps"
 import { bunLog, bunWrite, runCli } from "./helpers.ts"
 
 function writeOsFixture(dir: string): string {

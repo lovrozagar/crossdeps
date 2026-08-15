@@ -13,7 +13,7 @@
       "name": "@crossdeps/e2e-app",
       "version": "0.0.1",
       "dependencies": {
-        "@scriptgun/crossdeps": "workspace:*",
+        "@lovrozagar/crossdeps": "workspace:*",
       },
       "devDependencies": {
         "typescript": "catalog:",
@@ -23,15 +23,15 @@
       "name": "@crossdeps/example-consumer",
       "version": "0.0.1",
       "dependencies": {
-        "@scriptgun/crossdeps": "workspace:*",
+        "@lovrozagar/crossdeps": "workspace:*",
       },
       "devDependencies": {
         "typescript": "catalog:",
       },
     },
     "packages/core": {
-      "name": "@scriptgun/crossdeps",
-      "version": "0.2.0",
+      "name": "@lovrozagar/crossdeps",
+      "version": "0.1.0",
       "bin": {
         "crossdeps": "./src/cli.ts",
       },
@@ -55,6 +55,8 @@
     "@crossdeps/example-consumer": ["@crossdeps/example-consumer@workspace:examples/consumer"],
 
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
+
+    "@lovrozagar/crossdeps": ["@lovrozagar/crossdeps@workspace:packages/core"],
 
     "@oxc-project/types": ["@oxc-project/types@0.144.0", "", {}, "sha512-nuhZIOLuI6TFQ32I/WnUx+SCPY7SdSKwgnFHydAuoS1+Z4BRcaP+RRJmGzl9lw+0OFF7UmaESf7KQRXaNLHypg=="],
 
@@ -163,8 +165,6 @@
     "@rolldown/binding-win32-x64-msvc": ["@rolldown/binding-win32-x64-msvc@1.2.4", "", { "os": "win32", "cpu": "x64" }, "sha512-UwSDJOg3dqCAejWdxclJjCsh3Qq4vLYMDxmyHqo1btz3stK2VqgwNd3mm5tuIwzSlGIQ/1H9Hr+Zn09mrezNqQ=="],
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.1", "", {}, "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw=="],
-
-    "@scriptgun/crossdeps": ["@scriptgun/crossdeps@workspace:packages/core"],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 

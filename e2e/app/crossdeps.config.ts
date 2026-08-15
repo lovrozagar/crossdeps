@@ -1,4 +1,4 @@
-import { defineConfig } from "@scriptgun/crossdeps"
+import { defineConfig } from "@lovrozagar/crossdeps"
 
 /**
  * Fixture config for consumer tests. Commands are bun no-ops so they

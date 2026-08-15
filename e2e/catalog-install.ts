@@ -6,7 +6,7 @@
  */
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { sortByDependencies } from "@scriptgun/crossdeps"
+import { sortByDependencies } from "@lovrozagar/crossdeps"
 import catalog from "../examples/consumer/crossdeps.config.ts"
 
 const cli = join(import.meta.dir, "../packages/core/src/cli.ts")

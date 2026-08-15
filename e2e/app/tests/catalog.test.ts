@@ -6,7 +6,7 @@ import {
 	resolveOsCommand,
 	sortByDependencies,
 	type OsTarget,
-} from "@scriptgun/crossdeps"
+} from "@lovrozagar/crossdeps"
 import catalog from "../../../examples/consumer/crossdeps.config.ts"
 import { runCli } from "./helpers.ts"
 

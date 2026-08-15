@@ -2,14 +2,14 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, test } from "bun:test"
-import { detectOs } from "@scriptgun/crossdeps"
+import { detectOs } from "@lovrozagar/crossdeps"
 import { extraConfig, label, order, presentCheck, presentInstall } from "../src/app.ts"
 import config from "../crossdeps.config.ts"
 import { bunAppend, bunLog, bunWrite, runCli } from "./helpers.ts"
 
 const appDir = join(import.meta.dir, "..")
 
-describe("e2e-app consumes @scriptgun/crossdeps", () => {
+describe("e2e-app consumes @lovrozagar/crossdeps", () => {
 	test("defineConfig export has fixture deps", () => {
 		expect(Object.keys(config.deps).sort()).toEqual(["absent", "present", "unix-only"])
 		expect(config.packageJsonPath).toBe("package.json")

@@ -1,4 +1,4 @@
-import { defineConfig } from "@scriptgun/crossdeps"
+import { defineConfig } from "@lovrozagar/crossdeps"
 
 export default defineConfig({
 	deps: {

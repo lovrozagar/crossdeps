@@ -1,4 +1,4 @@
-# @scriptgun/crossdeps
+# @lovrozagar/crossdeps
 
 Define system dependencies in a TypeScript (or JS) config file. Install, check, and wire their environment on macOS, Linux (apt / dnf / pacman), and Windows with one CLI.
 
@@ -83,9 +83,9 @@ The library API (`defineConfig`, `detectOs`, …) can be imported from TypeScrip
 ## Install
 
 ```bash
-npm install -D @scriptgun/crossdeps
+npm install -D @lovrozagar/crossdeps
 # or
-bun add -D @scriptgun/crossdeps
+bun add -D @lovrozagar/crossdeps
 ```
 
 The bin name is `crossdeps`. After install:
@@ -100,7 +100,7 @@ bunx crossdeps
 Create `crossdeps.config.ts` in the project root (the directory you will run the CLI from):
 
 ```ts
-import { defineConfig } from "@scriptgun/crossdeps"
+import { defineConfig } from "@lovrozagar/crossdeps"
 
 export default defineConfig({
 	packageJsonPath: "package.json",
@@ -159,7 +159,7 @@ Follow these rules. They are the actual runtime, not suggestions.
 16. On Windows, commands matching PowerShell markers run in `powershell.exe`. Everything else runs in `cmd.exe`. On Unix, commands run in `/bin/bash`.
 17. `--os <target>` sets `CROSSDEPS_OS` for the process. Invalid targets exit 1.
 18. Unknown CLI command → print usage, exit 1. No command → print usage, exit 0.
-19. Public library surface is only what `@scriptgun/crossdeps` re-exports from `index.ts`. Do not import `./env.ts` or `./exec.ts` from the package.
+19. Public library surface is only what `@lovrozagar/crossdeps` re-exports from `index.ts`. Do not import `./env.ts` or `./exec.ts` from the package.
 20. Circular `dependsOn` logs a warning and still installs every node once.
 
 ## Config file
@@ -243,7 +243,7 @@ function defineConfig(options: {
 | `packageJsonPath` | `string` | `"package.json"` | Path used by `sync-pm` and the `check` packageManager probe. **Relative to the config file's directory**, not `cwd`. |
 
 ```ts
-import { defineConfig } from "@scriptgun/crossdeps"
+import { defineConfig } from "@lovrozagar/crossdeps"
 
 export default defineConfig({
 	packageJsonPath: "./apps/web/package.json",
@@ -1018,7 +1018,7 @@ Prints the Windows command strings. Does not run them. Does not write env. Does 
 
 ```ts
 // tooling/system-deps.ts
-import { defineConfig } from "@scriptgun/crossdeps"
+import { defineConfig } from "@lovrozagar/crossdeps"
 export const systemDeps = defineConfig({
 	packageJsonPath: "../package.json",
 	deps: { bun: { /* … */ } },
@@ -1041,7 +1041,7 @@ import {
 	resolveCheckCommand,
 	resolveOsCommand,
 	sortByDependencies,
-} from "@scriptgun/crossdeps"
+} from "@lovrozagar/crossdeps"
 
 const config = defineConfig({
 	deps: {
@@ -1100,7 +1100,7 @@ npm run setup:deps:sync-pm
 | Extra env tokens in `detect` (`$XDG_DATA_HOME`) | Not expanded. Existence check looks for a literal `$XDG_DATA_HOME/…` path. |
 | `sync-pm` for node | Not implemented. Only `deps.bun`. |
 | `packageJsonPath` relative to cwd | No. Relative to the config file directory. |
-| Import `@scriptgun/crossdeps/env` | Not exported. Use the CLI or copy the idea. |
+| Import `@lovrozagar/crossdeps/env` | Not exported. Use the CLI or copy the idea. |
 | JSON config | Not supported. |
 | Walking parent dirs for config | Not supported. Run from the directory that contains the file, or pass `--config`. |
 
