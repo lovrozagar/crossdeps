@@ -27,6 +27,7 @@ import {
 	shellKind,
 } from "./env.ts"
 import { sortByDependencies } from "./graph.ts"
+import { runShellCommand } from "./exec.ts"
 import { commandExists, detectOs, parseOsTarget } from "./platform.ts"
 
 const CONFIG_NAMES = ["crossdeps.config.ts", "crossdeps.config.js", "crossdeps.config.mjs"]
@@ -118,7 +119,7 @@ async function loadConfig(configPath: string): Promise<CrossdepsConfig> {
 
 function execCommand(command: string, ignoreError = false): boolean {
 	try {
-		execSync(command, { stdio: "inherit" })
+		runShellCommand(command)
 		return true
 	} catch (_error) {
 		if (!ignoreError) {

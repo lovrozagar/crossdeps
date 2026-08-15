@@ -43,7 +43,8 @@ async function tryOne(name: string): Promise<{ detail: string; outcome: Outcome 
 	])
 	clearTimeout(killer)
 
-	const text = `${stdout}\n${stderr}`
+	const text = `${stdout}\n${stderr}`.trim()
+	if (text) console.log(text)
 	if (timedOut) {
 		return { detail: "timed out", outcome: "timeout" }
 	}

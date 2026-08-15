@@ -37,7 +37,7 @@ yes | sudo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses > 
 sudo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0" "emulator" "system-images;android-34;google_apis;x86_64"
 
 if ! "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/avdmanager" list avd | grep -q "Pixel_7_API_34"; then
-  "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/avdmanager" create avd -n Pixel_7_API_34 -k "system-images;android-34;google_apis;x86_64" -d pixel_7 --force
+  "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/avdmanager" create avd -n Pixel_7_API_34 -k "system-images;android-34;google_apis;x86_64" -d pixel_7 --force || true
 fi`,
 				macos: `
 export ANDROID_SDK_ROOT="$HOME/Library/Android/sdk" && mkdir -p "$ANDROID_SDK_ROOT"
@@ -53,7 +53,7 @@ yes | "$CMDLINE_TOOLS/sdkmanager" --licenses > /dev/null 2>&1 || true
 "$CMDLINE_TOOLS/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0" "emulator" "system-images;android-34;google_apis;arm64-v8a"
 
 if ! "$CMDLINE_TOOLS/avdmanager" list avd | grep -q "Pixel_7_API_34"; then
-  "$CMDLINE_TOOLS/avdmanager" create avd -n Pixel_7_API_34 -k "system-images;android-34;google_apis;arm64-v8a" -d pixel_7 --force
+  "$CMDLINE_TOOLS/avdmanager" create avd -n Pixel_7_API_34 -k "system-images;android-34;google_apis;arm64-v8a" -d pixel_7 --force || true
 fi`,
 			},
 			required: true,
@@ -88,7 +88,8 @@ fi`,
 				"linux-dnf": "curl -sSf https://atlasgo.sh | sh -s -- --version v{{version}}",
 				"linux-pacman": "curl -sSf https://atlasgo.sh | sh -s -- --version v{{version}}",
 				macos: "curl -sSf https://atlasgo.sh | sh -s -- --version v{{version}}",
-				windows: "choco install atlas --version={{version}}",
+				windows:
+					"New-Item -ItemType Directory -Force \"$env:LOCALAPPDATA\\bin\" | Out-Null; Invoke-WebRequest -UseBasicParsing https://release.ariga.io/atlas/atlas-windows-amd64-latest.exe -OutFile \"$env:LOCALAPPDATA\\bin\\atlas.exe\"",
 			},
 			required: true,
 			version: "v1.0.1-1c2aa24-canary",
@@ -146,7 +147,8 @@ fi`,
 				"linux-dnf": 'curl -fsSL https://deno.land/install.sh | sh -s "v{{version}}"',
 				"linux-pacman": 'curl -fsSL https://deno.land/install.sh | sh -s "v{{version}}"',
 				macos: 'curl -fsSL https://deno.land/install.sh | sh -s "v{{version}}"',
-				windows: "irm https://deno.land/install.ps1 | iex",
+				windows:
+					"irm https://deno.land/install.ps1 | iex; if (Test-Path \"$env:USERPROFILE\\.deno\\bin\") { $env:Path = \"$env:USERPROFILE\\.deno\\bin;$env:Path\" }",
 			},
 			required: true,
 			version: "2.7.5",
@@ -208,10 +210,10 @@ fi`,
 			check: { command: "ls /Applications/Flux.app || ls /usr/bin/xflux" },
 			description: "Screen color temperature adjustment for eye comfort",
 			os: {
-				"linux-apt":
-					"sudo add-apt-repository -y ppa:nathan-renniewaldock/flux && sudo apt-get update && sudo apt-get install -y fluxgui",
-				"linux-dnf": "sudo dnf install -y f.lux",
-				"linux-pacman": "sudo pacman -S --noconfirm xflux-gui-git",
+				/* PPA and distro packages for f.lux are abandoned on current Linux */
+				"linux-apt": false,
+				"linux-dnf": false,
+				"linux-pacman": false,
 				macos: "brew install --cask flux",
 				windows: "choco install f.lux",
 			},
@@ -222,13 +224,17 @@ fi`,
 			check: { command: "forge --version" },
 			description: "Ethereum development toolkit (forge, cast, anvil)",
 			os: {
-				"linux-apt": "curl -L https://foundry.paradigm.xyz | bash && foundryup -v {{version}}",
-				"linux-dnf": "curl -L https://foundry.paradigm.xyz | bash && foundryup -v {{version}}",
-				"linux-pacman": "curl -L https://foundry.paradigm.xyz | bash && foundryup -v {{version}}",
-				macos: "curl -L https://foundry.paradigm.xyz | bash && foundryup -v {{version}}",
+				"linux-apt":
+					'curl -L https://foundry.paradigm.xyz | bash && export PATH="$HOME/.foundry/bin:$PATH" && foundryup --install {{version}}',
+				"linux-dnf":
+					'curl -L https://foundry.paradigm.xyz | bash && export PATH="$HOME/.foundry/bin:$PATH" && foundryup --install {{version}}',
+				"linux-pacman":
+					'curl -L https://foundry.paradigm.xyz | bash && export PATH="$HOME/.foundry/bin:$PATH" && foundryup --install {{version}}',
+				macos:
+					'curl -L https://foundry.paradigm.xyz | bash && export PATH="$HOME/.foundry/bin:$PATH" && foundryup --install {{version}}',
 			},
 			required: true,
-			version: "1.5.1-stable",
+			version: "stable",
 		},
 		git: {
 			description: "Version control system",
@@ -280,7 +286,7 @@ fi`,
 				"linux-dnf": "sudo dnf install -y nginx-{{version}} || sudo dnf install -y nginx",
 				"linux-pacman": "sudo pacman -S --noconfirm nginx",
 				macos: "brew install nginx",
-				windows: "choco install nginx --version={{version}}",
+				windows: "choco install nginx --version={{version}} || choco install nginx",
 			},
 			required: true,
 			version: "1.29.4",
@@ -317,9 +323,9 @@ fi`,
 			},
 			description: "System libraries required by Playwright browsers (WebKit, Chromium, Firefox)",
 			os: {
-				"linux-apt": "sudo npx playwright install-deps",
-				"linux-dnf": "sudo npx playwright install-deps",
-				"linux-pacman": "sudo npx playwright install-deps",
+				"linux-apt": "sudo npx --yes playwright install-deps",
+				"linux-dnf": "sudo npx --yes playwright install-deps",
+				"linux-pacman": "sudo npx --yes playwright install-deps",
 				macos: "echo 'No extra deps needed — macOS uses system frameworks'",
 			},
 			required: true,

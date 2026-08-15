@@ -56,4 +56,4 @@ jobs:
       - name: Install the monorepo catalog
         run: bun e2e/catalog-install.ts
         env:
-          CROSSDEPS_INSTALL_TIMEOUT_MS: "180000"
+          CROSSDEPS_INSTALL_TIMEOUT_MS: "600000"

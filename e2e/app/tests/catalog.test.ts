@@ -94,6 +94,7 @@ describe("monorepo catalog — every dep and command", () => {
 			"android-studio": ["linux-dnf", "linux-pacman", "windows"],
 			dnsmasq: ["windows"],
 			epiphany: ["macos", "windows"],
+			flux: ["linux-apt", "linux-dnf", "linux-pacman"],
 			foundry: ["windows"],
 			"google-chrome": ["linux-pacman"],
 			"playwright-deps": ["windows"],
