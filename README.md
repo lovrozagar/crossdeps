@@ -53,7 +53,7 @@ packages/core     published package (@scriptgun/crossdeps)
 examples/consumer sample app + the 24-dep catalog
 e2e/app           consumer tests over workspace:*
 e2e/docker        Linux distro matrix (apt / dnf / pacman)
-e2e/catalog-install.ts   real install of the catalog (CI)
+e2e/catalog-install.ts   real install of the catalog on this machine
 ```
 
 `packages/core` is the only published workspace. Consumers import `@scriptgun/crossdeps` over `workspace:*`.
@@ -71,8 +71,6 @@ bun run test:catalog-install # real catalog install on this machine
 bun run typecheck
 bun run typecheck:consumers
 ```
-
-CI runs unit + consumer tests on `ubuntu-latest`, `windows-latest`, and `macos-latest`, a Docker Linux matrix, and a full catalog install on those three GitHub-hosted OSes.
 
 ## License
 

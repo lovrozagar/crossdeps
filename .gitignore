@@ -22,3 +22,7 @@ node_modules
 .temp
 .cache/
 .project/
+
+# environment
+.env
+.env.*
