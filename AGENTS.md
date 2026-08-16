@@ -1,30 +1,22 @@
-# AGENTS.md
-
 ## Writing style
 
-Use en-US English throughout — code, comments, docs, and commit messages.
+en-US English everywhere — code, comments, docs, commit messages.
 
-## Git safety
+## Git
 
-Moving forward is yours to do without asking: `status`, `diff`, `log`, `add`,
-`commit`, creating branches, and pushing.
+Stay on `main`. Don't create, switch, or delete branches.
 
-Ask first — and wait for an answer — before anything that moves sideways:
-discarding work, rewriting history, forcing a change through, or recovering
-something. That includes:
+Fine without asking: `status`, `diff`, `log`, `add`, `commit`, `push`.
 
-- `reset --hard`, `checkout` / `restore` over uncommitted changes, `clean`
-- `stash`, `stash pop`, `stash drop`
-- `push --force`, including `--force-with-lease`
-- `rebase`, `cherry-pick`, `revert`, `commit --amend`
-- deleting a branch or tag, local or remote
-- anything reflog-driven
-
-If you cannot tell whether a command can lose work, treat it as one that can.
+Ask first, and wait: anything that can lose work — `reset --hard`, `checkout` /
+`restore` over uncommitted changes, `clean`, `stash` (any form), `push --force`
+(including `--force-with-lease`), `rebase`, `cherry-pick`, `revert`,
+`commit --amend`, deleting tags, anything reflog-driven. If you can't tell,
+assume it can.
 
 ## Before you call it done
 
-Run these from the repo root; CI runs the same set.
+From the repo root; CI runs the same set.
 
     bun run fmt          # oxfmt, rewrites in place
     bun run lint         # oxlint
@@ -34,4 +26,4 @@ Run these from the repo root; CI runs the same set.
     bun run test:consumers
 
 The Docker and catalog-install e2e suites (`test:e2e:docker`,
-`test:catalog-install`) are slow and only expected to run in CI.
+`test:catalog-install`) are slow — CI only.
