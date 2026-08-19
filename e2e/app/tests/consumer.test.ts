@@ -3,15 +3,15 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, test } from "bun:test"
 import { detectOs } from "@lovrozagar/crossdeps"
-import { extraConfig, label, order, presentCheck, presentInstall } from "../src/app.ts"
+import { bunBinary, extraConfig, label, order, presentCheck, presentInstall, presentPinMatches } from "../src/app.ts"
 import config from "../crossdeps.config.ts"
-import { bunAppend, bunLog, bunWrite, runCli } from "./helpers.ts"
+import { bunAppend, bunLog, bunRead, bunWrite, runCli } from "./helpers.ts"
 
 const appDir = join(import.meta.dir, "..")
 
 describe("e2e-app consumes @lovrozagar/crossdeps", () => {
 	test("defineConfig export has fixture deps", () => {
-		expect(Object.keys(config.deps).sort()).toEqual(["absent", "present", "unix-only"])
+		expect(Object.keys(config.deps).sort()).toEqual(["absent", "present", "stale", "unix-only"])
 		expect(config.packageJsonPath).toBe("package.json")
 	})
 
@@ -20,6 +20,8 @@ describe("e2e-app consumes @lovrozagar/crossdeps", () => {
 		expect(presentInstall).toContain("installed-present")
 		expect(order).toEqual(expect.arrayContaining(["absent", "present", "unix-only"]))
 		expect(label).toBe("present@1.0.0")
+		expect(presentPinMatches).toBe(true)
+		expect(bunBinary).toBeTruthy()
 		expect(extraConfig().deps.jq?.version).toBe("1.8.1")
 	})
 
@@ -53,6 +55,131 @@ describe("CLI as a workspace consumer", () => {
 		const result = await runCli(["install", "present"], { cwd: appDir })
 		expect(result.exitCode).toBe(0)
 		expect(result.stdout).toContain("Already installed")
+		expect(result.stdout).not.toContain("--upgrade")
+		expect(result.stdout).not.toContain("Installed successfully")
+	})
+
+	test("matching install --upgrade still skips", async () => {
+		const result = await runCli(["install", "present", "--upgrade"], { cwd: appDir })
+		expect(result.exitCode).toBe(0)
+		expect(result.stdout).toContain("Already installed")
+		expect(result.stdout).not.toContain("Installed successfully")
+		expect(result.stdout).not.toContain("installed-present")
+	})
+
+	test("install skips a version mismatch unless --upgrade", async () => {
+		const skipped = await runCli(["install", "stale"], { cwd: appDir })
+		expect(skipped.exitCode).toBe(0)
+		expect(skipped.stdout).toContain("Already installed (9.9.9)")
+		expect(skipped.stdout).toContain("crossdeps install stale --upgrade")
+
+		const upgraded = await runCli(["install", "stale", "--upgrade"], { cwd: appDir })
+		expect(upgraded.exitCode).toBe(0)
+		expect(upgraded.stdout).toContain("Installed successfully")
+		expect(upgraded.stdout).toContain("PATH still has 9.9.9")
+	})
+
+	test("mismatch install skips with path and --upgrade hint", async () => {
+		const result = await runCli(["install", "stale"], { cwd: appDir })
+		expect(result.exitCode).toBe(0)
+		expect(result.stdout).toContain("Already installed (9.9.9)")
+		expect(result.stdout).toMatch(/expected 1\.0\.0\) \S+/)
+		expect(result.stdout).toContain("crossdeps install stale --upgrade")
+		expect(result.stdout).not.toContain("Installed successfully")
+	})
+
+	test("mismatch install --upgrade runs the installer", async () => {
+		const result = await runCli(["install", "stale", "--upgrade"], { cwd: appDir })
+		expect(result.exitCode).toBe(0)
+		expect(result.stdout).toContain("Installed successfully")
+		expect(result.stdout).toContain("upgraded-stale")
+		expect(result.stdout).not.toContain("Already installed")
+	})
+
+	test("install --upgrade warns when PATH still reports the old version", async () => {
+		const result = await runCli(["install", "stale", "--upgrade"], { cwd: appDir })
+		expect(result.exitCode).toBe(0)
+		expect(result.stdout).toContain("Installed successfully")
+		expect(result.stdout).toContain("PATH still has 9.9.9")
+		expect(result.stdout).toMatch(/PATH still has 9\.9\.9 \(expected 1\.0\.0\) \S+/)
+	})
+
+	test("install --upgrade does not warn when check version matches after install", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "crossdeps-upgrade-match-"))
+		const versionFile = join(dir, "version.txt")
+		writeFileSync(versionFile, "9.9.9")
+		writeFileSync(
+			join(dir, "crossdeps.config.ts"),
+			`export default {
+	deps: {
+		bump: {
+			check: { command: ${JSON.stringify(bunRead("VERSION_FILE"))} },
+			description: "mismatch then match",
+			os: { all: ${JSON.stringify(bunWrite("VERSION_FILE", "1.0.0"))} },
+			required: true,
+			version: "1.0.0",
+		},
+	},
+}
+`,
+		)
+		const result = await runCli(["install", "bump", "--upgrade", "--config", join(dir, "crossdeps.config.ts")], {
+			cwd: dir,
+			env: { VERSION_FILE: versionFile },
+		})
+		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
+		expect(result.stdout).toContain("Installed successfully")
+		expect(result.stdout).not.toContain("PATH still has")
+		expect(readFileSync(versionFile, "utf-8")).toBe("1.0.0")
+	})
+
+	test("install --dry-run --upgrade prints dry-run and does not skip", async () => {
+		const result = await runCli(["install", "--dry-run", "--upgrade", "stale"], { cwd: appDir })
+		expect(result.exitCode).toBe(0)
+		expect(result.stdout).toContain("dry-run:")
+		expect(result.stdout).not.toContain("Already installed")
+		expect(result.stdout).not.toContain("Installed successfully")
+		expect(result.stdout).not.toContain("PATH still has")
+	})
+
+	test("check all mismatch includes a path and the --upgrade footer", async () => {
+		const result = await runCli(["check"], { cwd: appDir })
+		expect(result.exitCode).toBe(0)
+		expect(result.stdout).toMatch(/stale@9\.9\.9 \(expected 1\.0\.0\) \S+/)
+		expect(result.stdout).toContain("crossdeps install --upgrade")
+	})
+
+	test("check named mismatch exits 0 and prints expected plus path", async () => {
+		const result = await runCli(["check", "stale"], { cwd: appDir })
+		expect(result.exitCode).toBe(0)
+		expect(result.stdout).toContain("expected 1.0.0")
+		expect(result.stdout).toMatch(/stale@9\.9\.9 \(expected 1\.0\.0\) \S+/)
+	})
+
+	test("--upgrade on check is ignored", async () => {
+		const named = await runCli(["check", "stale"], { cwd: appDir })
+		const namedFlag = await runCli(["check", "stale", "--upgrade"], { cwd: appDir })
+		const namedFlagBefore = await runCli(["check", "--upgrade", "stale"], { cwd: appDir })
+		expect(named.exitCode).toBe(0)
+		expect(namedFlag.exitCode).toBe(named.exitCode)
+		expect(namedFlag.stdout).toBe(named.stdout)
+		expect(namedFlagBefore.exitCode).toBe(named.exitCode)
+		expect(namedFlagBefore.stdout).toBe(named.stdout)
+
+		const all = await runCli(["check"], { cwd: appDir })
+		const allFlag = await runCli(["check", "--upgrade"], { cwd: appDir })
+		expect(allFlag.exitCode).toBe(all.exitCode)
+		expect(allFlag.stdout).toBe(all.stdout)
+	})
+
+	test("install --upgrade accepts either flag order", async () => {
+		const flagFirst = await runCli(["install", "--upgrade", "stale"], { cwd: appDir })
+		expect(flagFirst.exitCode).toBe(0)
+		expect(flagFirst.stdout).toContain("Installed successfully")
+
+		const nameFirst = await runCli(["install", "stale", "--upgrade"], { cwd: appDir })
+		expect(nameFirst.exitCode).toBe(0)
+		expect(nameFirst.stdout).toContain("Installed successfully")
 	})
 
 	test("install --config uses the given file", async () => {
@@ -107,6 +234,7 @@ describe("CLI as a workspace consumer", () => {
 		})
 		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
 		expect(result.stdout).toContain("Installed successfully")
+		expect(result.stdout).not.toContain("PATH still has")
 		expect(readFileSync(marker, "utf-8")).toBe("fresh-ok")
 	})
 

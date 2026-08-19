@@ -21,6 +21,23 @@ export function commandExists(command: string): boolean {
 	}
 }
 
+/** Resolved path of the first token (`command -v` / `where`). Null if missing. */
+export function whichBinary(command: string, platform: NodeJS.Platform = process.platform): string | null {
+	const token = command.replace(/^["']|["']$/g, "")
+	if (!token) return null
+	if (existsSync(token)) return token
+	try {
+		if (platform === "win32") {
+			const out = execSync(`where ${token}`, { encoding: "utf-8" }).trim()
+			return out.split(/\r?\n/).find(Boolean) ?? null
+		}
+		const out = execSync(`command -v ${token}`, { encoding: "utf-8" }).trim()
+		return out || null
+	} catch {
+		return null
+	}
+}
+
 export function parseOsTarget(value: string): OsTarget {
 	if ((OS_TARGETS as readonly string[]).includes(value)) return value as OsTarget
 	throw new Error(`Unknown OS target: ${value}. Expected one of: ${OS_TARGETS.join(", ")}`)

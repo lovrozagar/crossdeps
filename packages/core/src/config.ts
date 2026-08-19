@@ -66,6 +66,11 @@ function detectArch(): string {
 	return "amd64"
 }
 
+/** Same table `check` uses. `"latest"` matches anything with a parsed version. */
+export function versionsMatch(installed: string, expected: string): boolean {
+	return expected === "latest" || installed === expected || expected.includes(installed) || installed.includes(expected)
+}
+
 export function interpolate(template: string, name: string, version: string): string {
 	const major = version.split(".")[0] ?? version
 	return template

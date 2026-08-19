@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 - 2026-08-19
+
+- `install --upgrade` re-runs the install command when the detected version does not match the pin (`latest` still matches any parsed version)
+- `install` without `--upgrade` still skips a present binary, but mismatch now prints the resolved path and `run: crossdeps install <name> --upgrade`
+- After `--upgrade`, if PATH still reports the old version, print a shadow warning (brew/nvm/fnm winning over the installer)
+- `check` mismatch lines include the resolved binary path
+- Export `versionsMatch` and `whichBinary`
+
 ## 0.1.0 - 2026-08-15
 
 First public release of `@lovrozagar/crossdeps`.

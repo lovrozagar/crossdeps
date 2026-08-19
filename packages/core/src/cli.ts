@@ -16,7 +16,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { dirname, resolve } from "node:path"
 import type { CrossdepsConfig, EnvVar, OsTarget, SystemDepConfig } from "./config.ts"
-import { resolveCheckCommand, resolveOsCommand } from "./config.ts"
+import { resolveCheckCommand, resolveOsCommand, versionsMatch } from "./config.ts"
 import {
 	applyEnvBlock,
 	ensureParentDir,
@@ -28,7 +28,7 @@ import {
 } from "./env.ts"
 import { sortByDependencies } from "./graph.ts"
 import { runShellCommand } from "./exec.ts"
-import { commandExists, detectOs, parseOsTarget } from "./platform.ts"
+import { commandExists, detectOs, parseOsTarget, whichBinary } from "./platform.ts"
 
 const CONFIG_NAMES = ["crossdeps.config.ts", "crossdeps.config.js", "crossdeps.config.mjs"]
 
@@ -46,6 +46,7 @@ Flags:
   --config <path>      Config file (default: crossdeps.config.ts in cwd)
   --os <target>        Force OS target (or set CROSSDEPS_OS)
   --dry-run            Print install commands without running them
+  --upgrade            Re-run install when the detected version does not match
 `
 
 /**
@@ -125,9 +126,19 @@ function execCommand(command: string, ignoreError = false): boolean {
 	}
 }
 
+function checkBinaryToken(name: string, config: SystemDepConfig): string | undefined {
+	return resolveCheckCommand(name, config).split(/\s+/)[0]
+}
+
+function binaryPathNote(name: string, config: SystemDepConfig): string {
+	const token = checkBinaryToken(name, config)
+	const path = token ? whichBinary(token) : null
+	return path ? ` ${path}` : ""
+}
+
 function getInstalledVersion(name: string, config: SystemDepConfig): string | null {
 	const checkCmd = resolveCheckCommand(name, config)
-	const binary = checkCmd.split(" ")[0]
+	const binary = checkBinaryToken(name, config)
 	if (binary && !commandExists(binary)) return null
 
 	try {
@@ -216,6 +227,7 @@ function installOne(
 	config: SystemDepConfig,
 	os: OsTarget,
 	dryRun = false,
+	upgrade = false,
 ): "installed" | "skipped" | "failed" | "unavailable" {
 	const command = resolveOsCommand(name, config, os)
 
@@ -233,8 +245,15 @@ function installOne(
 	}
 
 	const installed = getInstalledVersion(name, config)
-	if (installed) {
+	if (installed && versionsMatch(installed, config.version)) {
 		console.log(`   Already installed (${installed}), skipping`)
+		return "skipped"
+	}
+	if (installed && !upgrade) {
+		console.log(
+			`   Already installed (${installed}), skipping (expected ${config.version})${binaryPathNote(name, config)}`,
+		)
+		console.log(`   run: crossdeps install ${name} --upgrade`)
 		return "skipped"
 	}
 
@@ -244,6 +263,12 @@ function installOne(
 		if (config.env && config.env.length > 0) {
 			configureEnvVars(name, config.env)
 		}
+		/* Installer often does not win PATH — brew/nvm/fnm still first. */
+		const after = getInstalledVersion(name, config)
+		if (after && !versionsMatch(after, config.version)) {
+			console.log(`   PATH still has ${after} (expected ${config.version})${binaryPathNote(name, config)}`)
+			console.log("   Unpin/unlink that binary or put the pinned one first on PATH")
+		}
 		return "installed"
 	}
 
@@ -251,7 +276,12 @@ function installOne(
 	return "failed"
 }
 
-function cmdInstall(deps: Record<string, SystemDepConfig>, target: string | undefined, dryRun = false): void {
+function cmdInstall(
+	deps: Record<string, SystemDepConfig>,
+	target: string | undefined,
+	dryRun = false,
+	upgrade = false,
+): void {
 	const os = detectOs()
 
 	if (target) {
@@ -262,7 +292,7 @@ function cmdInstall(deps: Record<string, SystemDepConfig>, target: string | unde
 			process.exit(1)
 		}
 		console.log(`Detected OS: ${os}`)
-		const result = installOne(target, config, os, dryRun)
+		const result = installOne(target, config, os, dryRun, upgrade)
 		if (result === "failed") process.exit(1)
 		return
 	}
@@ -289,7 +319,7 @@ function cmdInstall(deps: Record<string, SystemDepConfig>, target: string | unde
 	let unavailable = 0
 
 	for (const [name, config] of entries) {
-		const result = installOne(name, config, os, dryRun)
+		const result = installOne(name, config, os, dryRun, upgrade)
 
 		if (result === "installed") installed++
 		else if (result === "skipped") skipped++
@@ -339,7 +369,7 @@ function cmdCheck(
 			console.log(`${target} — not installed (expected ${config.version})`)
 			process.exit(1)
 		} else {
-			console.log(`${target}@${installed} (expected ${config.version})`)
+			console.log(`${target}@${installed} (expected ${config.version})${binaryPathNote(target, config)}`)
 		}
 		return
 	}
@@ -366,16 +396,11 @@ function cmdCheck(
 			console.log(`  x ${badge} ${name} — not installed (expected ${config.version})`)
 			if (config.required) missing++
 			else warn++
-		} else if (
-			config.version === "latest" ||
-			installed === config.version ||
-			config.version.includes(installed) ||
-			installed.includes(config.version)
-		) {
+		} else if (versionsMatch(installed, config.version)) {
 			console.log(`  v ${badge} ${name}@${installed}`)
 			ok++
 		} else {
-			console.log(`  ~ ${badge} ${name}@${installed} (expected ${config.version})`)
+			console.log(`  ~ ${badge} ${name}@${installed} (expected ${config.version})${binaryPathNote(name, config)}`)
 			warn++
 		}
 	}
@@ -414,7 +439,7 @@ function cmdCheck(
 	}
 
 	if (warn > 0) {
-		console.log("\nVersion mismatches found — update crossdeps.config.ts or reinstall")
+		console.log("\nVersion mismatches found — run: crossdeps install --upgrade")
 	} else {
 		console.log("\nAll system dependencies OK")
 	}
@@ -510,13 +535,14 @@ async function main(): Promise<void> {
 
 	const configStripped = stripFlag(osFlag.args, "--config")
 	const dry = stripBoolFlag(configStripped.args, "--dry-run")
-	const args = dry.args
+	const upgrade = stripBoolFlag(dry.args, "--upgrade")
+	const args = upgrade.args
 	const command = args[0]
 	const target = args[1]
 
 	switch (command) {
 		case "install":
-			cmdInstall(deps, target, dry.present)
+			cmdInstall(deps, target, dry.present, upgrade.present)
 			break
 		case "check":
 			cmdCheck(deps, configDir, packageJsonPath, target)

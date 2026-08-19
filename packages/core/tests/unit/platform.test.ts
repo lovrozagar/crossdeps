@@ -3,7 +3,14 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { OS_TARGETS } from "../../src/config.ts"
-import { commandExists, commandLookup, detectOs, detectOsFromPlatform, parseOsTarget } from "../../src/platform.ts"
+import {
+	commandExists,
+	commandLookup,
+	detectOs,
+	detectOsFromPlatform,
+	parseOsTarget,
+	whichBinary,
+} from "../../src/platform.ts"
 
 describe("commandExists", () => {
 	it("returns true for a command on PATH", () => {
@@ -51,6 +58,35 @@ describe("detectOs", () => {
 
 	it("rejects an unknown override", () => {
 		expect(() => detectOs("freebsd")).toThrow(/Unknown OS target/)
+	})
+})
+
+describe("whichBinary", () => {
+	it("resolves a command on PATH", () => {
+		expect(whichBinary("sh")).toMatch(/sh/)
+	})
+
+	it("returns null for a missing command", () => {
+		expect(whichBinary("crossdeps-definitely-not-installed")).toBeNull()
+	})
+
+	it("returns an existing file path as-is", () => {
+		const file = join(mkdtempSync(join(tmpdir(), "crossdeps-which-")), "tool")
+		writeFileSync(file, "")
+		expect(whichBinary(file)).toBe(file)
+	})
+
+	it("strips surrounding quotes before resolving an existing file", () => {
+		const file = join(mkdtempSync(join(tmpdir(), "crossdeps-which-q-")), "tool")
+		writeFileSync(file, "")
+		expect(whichBinary(`"${file}"`)).toBe(file)
+		expect(whichBinary(`'${file}'`)).toBe(file)
+	})
+
+	it("returns null for an empty token", () => {
+		expect(whichBinary("")).toBeNull()
+		expect(whichBinary('""')).toBeNull()
+		expect(whichBinary("''")).toBeNull()
 	})
 })
 

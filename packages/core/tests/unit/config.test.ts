@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { SystemDepConfig } from "../../src/config.ts"
-import { defineConfig, interpolate, resolveCheckCommand, resolveOsCommand } from "../../src/config.ts"
+import { defineConfig, interpolate, resolveCheckCommand, resolveOsCommand, versionsMatch } from "../../src/config.ts"
 
 function dep(overrides: Partial<SystemDepConfig> = {}): SystemDepConfig {
 	return {
@@ -65,6 +65,27 @@ describe("resolveCheckCommand", () => {
 		expect(resolveCheckCommand("atlas", dep({ check: { command: "{{name}} version {{version}}" } }))).toBe(
 			"atlas version 1.2.3",
 		)
+	})
+})
+
+describe("versionsMatch", () => {
+	it("treats latest as a match for any parsed version", () => {
+		expect(versionsMatch("1.3.11", "latest")).toBe(true)
+	})
+
+	it("matches equal strings and substrings either way", () => {
+		expect(versionsMatch("24.19.0", "24.19.0")).toBe(true)
+		expect(versionsMatch("1.0.1", "v1.0.1-1c2aa24-canary")).toBe(true)
+		expect(versionsMatch("v1.0.1-1c2aa24-canary", "1.0.1")).toBe(true)
+	})
+
+	it("rejects a different version", () => {
+		expect(versionsMatch("25.5.0", "24.19.0")).toBe(false)
+	})
+
+	it("rejects stable against a semver string", () => {
+		expect(versionsMatch("1.2.3", "stable")).toBe(false)
+		expect(versionsMatch("stable", "1.2.3")).toBe(false)
 	})
 })
 

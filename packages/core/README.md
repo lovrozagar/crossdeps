@@ -55,16 +55,17 @@ You write `crossdeps.config.ts` listing tools such as `node`, `bun`, `docker`, `
 Then:
 
 ```bash
-bunx crossdeps install      # install missing deps for this OS
-bunx crossdeps check        # report installed vs expected
-bunx crossdeps env          # write env blocks for deps that define env
-bunx crossdeps sync-pm      # write package.json "packageManager": "bun@<version>"
+bunx crossdeps install              # install missing deps for this OS
+bunx crossdeps install --upgrade    # also re-run installers on version mismatch
+bunx crossdeps check                # report installed vs expected
+bunx crossdeps env                  # write env blocks for deps that define env
+bunx crossdeps sync-pm              # write package.json "packageManager": "bun@<version>"
 ```
 
 It does **not**:
 
 - install npm/bun workspace packages
-- upgrade a dep that is already present (any detected version counts as installed)
+- rewrite PATH so a newly installed binary wins over brew/nvm/fnm (it warns)
 - install `dependsOn` targets when you install a single name
 - support JSON/YAML/TOML config (modules only: `.ts` / `.js` / `.mjs`)
 - expose `env.ts` / `exec.ts` helpers as public API
@@ -132,6 +133,7 @@ export default defineConfig({
 
 ```bash
 bunx crossdeps install
+bunx crossdeps install --upgrade
 bunx crossdeps check
 bunx crossdeps install --dry-run
 bunx crossdeps sync-pm
@@ -149,7 +151,7 @@ Follow these rules. They are the actual runtime, not suggestions.
 6. `{{name}}`, `{{version}}`, `{{major}}`, `{{arch}}` are interpolated in `os` commands and `check.command`. `{{arch}}` is `arm64` only when `process.arch === "arm64"`; every other arch is `amd64`.
 7. Default check command is `{{name}} --version`. A dep is "installed" only if the check binary exists **and** stdout/stderr of the check command matches `(\d+\.\d+[\w.-]*)`.
 8. `install` (no name) topologically sorts by `dependsOn`. `install <name>` installs **only** that name and does **not** walk `dependsOn`.
-9. If any version is detected, `install` skips. It does not upgrade. `--dry-run` never skips and reports the dep as installed without running the command.
+9. `install` skips when a detected version **matches** the pin (`latest` or substring either way). Mismatch without `--upgrade` skips, prints the resolved binary path, and hints `crossdeps install <name> --upgrade`. `--upgrade` re-runs the install command on mismatch only. After that command succeeds, if PATH still reports a non-matching version, print a shadow warning (do not fail). `--dry-run` never skips.
 10. Failed **required** deps fail `install` (exit 1). Failed **optional** deps are counted as skipped.
 11. Unavailable on this OS is not a failure.
 12. `check` (all): missing **required** → exit 1. Version mismatch → warning, exit 0. Missing optional → warning, exit 0.
@@ -473,26 +475,30 @@ Flags:
   --config <path>      Config file (default: crossdeps.config.ts in cwd)
   --os <target>        Force OS target (or set CROSSDEPS_OS)
   --dry-run            Print install commands without running them
+  --upgrade            Re-run install when the detected version does not match
 ```
 
 ### Invocation and flags
 
 ```bash
-bunx crossdeps <command> [name] [--config <path>] [--os <target>] [--dry-run]
+bunx crossdeps <command> [name] [--config <path>] [--os <target>] [--dry-run] [--upgrade]
 ```
 
 Flags may appear before or after the command. Each flag is stripped once (first occurrence).
 
-| Flag / env        | Applies to     | Behavior                                                                                                      |
-| ----------------- | -------------- | ------------------------------------------------------------------------------------------------------------- |
-| `--config <path>` | all commands   | Required path argument. Must exist.                                                                           |
-| `--os <target>`   | all commands   | Must be one of `OS_TARGETS`. Sets `process.env.CROSSDEPS_OS`. Missing value or unknown target → exit 1.       |
-| `CROSSDEPS_OS`    | all commands   | Same as `--os` when `--os` is not passed.                                                                     |
-| `--dry-run`       | `install` only | Prints `dry-run: <command>` and counts the dep as installed. Silently ignored by `check` / `env` / `sync-pm`. |
+| Flag / env        | Applies to     | Behavior                                                                                                                                               |
+| ----------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--config <path>` | all commands   | Required path argument. Must exist.                                                                                                                    |
+| `--os <target>`   | all commands   | Must be one of `OS_TARGETS`. Sets `process.env.CROSSDEPS_OS`. Missing value or unknown target → exit 1.                                                |
+| `CROSSDEPS_OS`    | all commands   | Same as `--os` when `--os` is not passed.                                                                                                              |
+| `--dry-run`       | `install` only | Prints `dry-run: <command>` and counts the dep as installed. Silently ignored by `check` / `env` / `sync-pm`.                                          |
+| `--upgrade`       | `install` only | Re-run the install command when the detected version does **not** match the pin. Matching versions still skip. Ignored by `check` / `env` / `sync-pm`. |
 
 ```bash
 bunx crossdeps install
 bunx crossdeps install node
+bunx crossdeps install --upgrade
+bunx crossdeps install node --upgrade
 bunx crossdeps install --dry-run
 bunx crossdeps install node --os windows --dry-run
 bunx crossdeps --config ./deps.ts --os linux-dnf check bun
@@ -553,11 +559,12 @@ exit 1.
 
 1. Resolve the install command for the detected OS. None → log unavailable, return.
 2. If `--dry-run` → print `dry-run: <command>`, return **installed** (no check, no exec, no env write).
-3. If [version detection](#version-detection) returns any string → print `Already installed (<ver>), skipping`, return skipped.
-4. Run the command. Success → print `Installed successfully`, then if `env` is non-empty run the env writer, return installed.
-5. Failure → print `Installation failed`. Required → failed. Optional → skipped.
+3. If [version detection](#version-detection) returns a string that **matches** the pin → print `Already installed (<ver>), skipping`, return skipped.
+4. If a version is detected but does **not** match, and `--upgrade` is off → print `Already installed (<ver>), skipping (expected <pin>)` plus the resolved binary path and `run: crossdeps install <name> --upgrade`, return skipped.
+5. Run the command. Success → print `Installed successfully`, then if `env` is non-empty run the env writer. Re-check the version; if PATH still does not match, print a shadow warning. Return installed.
+6. Failure → print `Installation failed`. Required → failed. Optional → skipped.
 
-`install` does not compare the detected version to `config.version`. Any detected version skips.
+Matching uses the same table as `check`. `--upgrade` does not re-run a dep whose detected version already matches.
 
 ### `check`
 
@@ -565,13 +572,13 @@ exit 1.
 
 For each dep in `Object.entries` order (not topo-sorted):
 
-| Situation                        | Line                                                 | Counter  |
-| -------------------------------- | ---------------------------------------------------- | -------- |
-| No install command on this OS    | `- [required] name — not available on <os>`          | none     |
-| Check found no version, required | `x [required] name — not installed (expected <ver>)` | Missing  |
-| Check found no version, optional | `x [optional] name — not installed (expected <ver>)` | Mismatch |
-| Version matches (see below)      | `v [required] name@<installed>`                      | OK       |
-| Version does not match           | `~ [required] name@<installed> (expected <ver>)`     | Mismatch |
+| Situation                        | Line                                                    | Counter  |
+| -------------------------------- | ------------------------------------------------------- | -------- |
+| No install command on this OS    | `- [required] name — not available on <os>`             | none     |
+| Check found no version, required | `x [required] name — not installed (expected <ver>)`    | Missing  |
+| Check found no version, optional | `x [optional] name — not installed (expected <ver>)`    | Mismatch |
+| Version matches (see below)      | `v [required] name@<installed>`                         | OK       |
+| Version does not match           | `~ [required] name@<installed> (expected <ver>) <path>` | Mismatch |
 
 A version **matches** if any of these is true:
 
@@ -600,17 +607,17 @@ OK: N  Mismatch: N  Missing: N
 ```
 
 - Missing > 0 → `Required dependencies missing — run: crossdeps install`, exit 1.
-- Mismatch > 0 → `Version mismatches found — update crossdeps.config.ts or reinstall`, exit 0.
+- Mismatch > 0 → `Version mismatches found — run: crossdeps install --upgrade`, exit 0.
 - Else → `All system dependencies OK`, exit 0.
 
 **One dep** (`crossdeps check bun`):
 
-| Situation              | Output                                 | Exit |
-| ---------------------- | -------------------------------------- | ---- |
-| Unknown name           | `Unknown dependency: …`                | 1    |
-| Unavailable on this OS | `bun — not available on <os>`          | 0    |
-| No version detected    | `bun — not installed (expected <ver>)` | 1    |
-| Any version detected   | `bun@<installed> (expected <ver>)`     | 0    |
+| Situation              | Output                                    | Exit |
+| ---------------------- | ----------------------------------------- | ---- |
+| Unknown name           | `Unknown dependency: …`                   | 1    |
+| Unavailable on this OS | `bun — not available on <os>`             | 0    |
+| No version detected    | `bun — not installed (expected <ver>)`    | 1    |
+| Any version detected   | `bun@<installed> (expected <ver>) <path>` | 0    |
 
 Single-target check does **not** apply the match table. Any parsed version is success, even if it disagrees with `config.version`. Single-target check does **not** honor `required: false` for the missing case.
 
@@ -774,9 +781,9 @@ This is the entire public surface (`src/index.ts`):
 
 ```ts
 export type { CrossdepsConfig, EnvVar, OsCommands, OsTarget, SystemDepConfig }
-export { defineConfig, interpolate, OS_TARGETS, resolveCheckCommand, resolveOsCommand }
+export { defineConfig, interpolate, OS_TARGETS, resolveCheckCommand, resolveOsCommand, versionsMatch }
 export { sortByDependencies }
-export { commandExists, commandLookup, detectOs, detectOsFromPlatform, parseOsTarget }
+export { commandExists, commandLookup, detectOs, detectOsFromPlatform, parseOsTarget, whichBinary }
 ```
 
 ### `OS_TARGETS`
@@ -879,6 +886,22 @@ commandExists("sh") // true on Unix
 commandExists("/usr/local/bin/node")
 commandExists('"/usr/local/bin/node"')
 commandExists("crossdeps-not-real") // false
+```
+
+### `versionsMatch(installed, expected)`
+
+```ts
+versionsMatch("24.19.0", "24.19.0") // true
+versionsMatch("1.0.1", "v1.0.1-canary") // true
+versionsMatch("25.5.0", "24.19.0") // false
+versionsMatch("1.3.11", "latest") // true
+```
+
+### `whichBinary(command, platform?)`
+
+```ts
+whichBinary("sh") // "/usr/bin/sh"
+whichBinary("crossdeps-not-real") // null
 ```
 
 ## Worked examples
@@ -1063,6 +1086,7 @@ const order = sortByDependencies(Object.entries(config.deps))
 {
 	"scripts": {
 		"setup:deps": "crossdeps install",
+		"setup:deps:upgrade": "crossdeps install --upgrade",
 		"setup:deps:check": "crossdeps check",
 		"setup:deps:env": "crossdeps env",
 		"setup:deps:sync-pm": "crossdeps sync-pm"
@@ -1083,23 +1107,23 @@ npm run setup:deps:sync-pm
 
 ## Gotchas
 
-| Trap                                            | What actually happens                                                                              |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `install <name>` of a dep with `dependsOn`      | Dependents are **not** installed.                                                                  |
-| Tool already installed at the wrong version     | `install` skips. Change the check, uninstall manually, or live with `check` mismatch.              |
-| `--dry-run` to "see what would skip"            | Dry-run never checks installed versions. Everything with a command is "installed".                 |
-| Check command that prints no `N.N`              | Treated as not installed. Install will run every time.                                             |
-| `check <optional-dep>` when missing             | Exit 1. `required: false` only changes all-deps `install` / `check`.                               |
-| `{{arch}}` on `x64`                             | `amd64`, not `x64`.                                                                                |
-| Linux without apt/dnf/pacman                    | Detected as `linux-apt`.                                                                           |
-| `os.windows` uses `\|\|` plus `$env:`           | Routed to PowerShell; `\|\|` is wrong. Keep cmd syntax and PowerShell syntax in separate commands. |
-| `env.detect` writes the resolved path           | No. It writes the template (`$HOME/...`).                                                          |
-| Extra env tokens in `detect` (`$XDG_DATA_HOME`) | Not expanded. Existence check looks for a literal `$XDG_DATA_HOME/…` path.                         |
-| `sync-pm` for node                              | Not implemented. Only `deps.bun`.                                                                  |
-| `packageJsonPath` relative to cwd               | No. Relative to the config file directory.                                                         |
-| Import `@lovrozagar/crossdeps/env`              | Not exported. Use the CLI or copy the idea.                                                        |
-| JSON config                                     | Not supported.                                                                                     |
-| Walking parent dirs for config                  | Not supported. Run from the directory that contains the file, or pass `--config`.                  |
+| Trap                                            | What actually happens                                                                                                                                        |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `install <name>` of a dep with `dependsOn`      | Dependents are **not** installed.                                                                                                                            |
+| Tool already installed at the wrong version     | `install` skips. `install --upgrade` re-runs the command. If PATH still shows the old binary (brew/nvm/fnm), that is a shadow warning, not a failed install. |
+| `--dry-run` to "see what would skip"            | Dry-run never checks installed versions. Everything with a command is "installed".                                                                           |
+| Check command that prints no `N.N`              | Treated as not installed. Install will run every time.                                                                                                       |
+| `check <optional-dep>` when missing             | Exit 1. `required: false` only changes all-deps `install` / `check`.                                                                                         |
+| `{{arch}}` on `x64`                             | `amd64`, not `x64`.                                                                                                                                          |
+| Linux without apt/dnf/pacman                    | Detected as `linux-apt`.                                                                                                                                     |
+| `os.windows` uses `\|\|` plus `$env:`           | Routed to PowerShell; `\|\|` is wrong. Keep cmd syntax and PowerShell syntax in separate commands.                                                           |
+| `env.detect` writes the resolved path           | No. It writes the template (`$HOME/...`).                                                                                                                    |
+| Extra env tokens in `detect` (`$XDG_DATA_HOME`) | Not expanded. Existence check looks for a literal `$XDG_DATA_HOME/…` path.                                                                                   |
+| `sync-pm` for node                              | Not implemented. Only `deps.bun`.                                                                                                                            |
+| `packageJsonPath` relative to cwd               | No. Relative to the config file directory.                                                                                                                   |
+| Import `@lovrozagar/crossdeps/env`              | Not exported. Use the CLI or copy the idea.                                                                                                                  |
+| JSON config                                     | Not supported.                                                                                                                                               |
+| Walking parent dirs for config                  | Not supported. Run from the directory that contains the file, or pass `--config`.                                                                            |
 
 ## Releases
 

@@ -33,3 +33,7 @@ export function bunAppend(envKey: string, value: string): string {
 export function bunLog(value: string): string {
 	return `bun -e ${JSON.stringify(`console.log(${JSON.stringify(value)})`)}`
 }
+
+export function bunRead(envKey: string): string {
+	return `bun -e ${JSON.stringify(`console.log((await Bun.file(process.env.${envKey}).text()).trim())`)}`
+}

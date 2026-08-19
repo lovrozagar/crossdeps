@@ -21,6 +21,13 @@ export default defineConfig({
 			required: true,
 			version: "1.0.0",
 		},
+		stale: {
+			check: { command: "bun -e \"console.log('9.9.9')\"" },
+			description: "Present at the wrong version (mismatch fixture)",
+			os: { all: "bun -e \"console.log('upgraded-stale')\"" },
+			required: false,
+			version: "1.0.0",
+		},
 		"unix-only": {
 			check: { command: "bun -e \"console.log('0.1.0')\"" },
 			description: "Unavailable on Windows",
