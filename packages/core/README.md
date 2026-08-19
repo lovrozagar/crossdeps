@@ -154,7 +154,7 @@ Follow these rules. They are the actual runtime, not suggestions.
 9. `install` skips when a detected version **matches** the pin (`latest` or substring either way). Mismatch without `--upgrade` skips, prints the resolved binary path, and hints `crossdeps install <name> --upgrade`. `--upgrade` re-runs the install command on mismatch only. After that command succeeds, if PATH still reports a non-matching version, print a shadow warning (do not fail). `--dry-run` never skips.
 10. Failed **required** deps fail `install` (exit 1). Failed **optional** deps are counted as skipped.
 11. Unavailable on this OS is not a failure.
-12. `check` / `check <name>` snapshot PATH once from a new interactive TTY (bash: `$SHELL -ic` with stdin `/dev/null`, not login-only `-lc`; zsh: `$SHELL -lic`; Windows: `powershell.exe` **with** profile, `$env:Path`) and run every version probe with that PATH so results match a new desktop TTY. `--here` uses this process PATH. Spawn failure or empty PATH → this process PATH and one warning (do not crash). `install` / `--upgrade` always use this process PATH.
+12. `check` / `check <name>` snapshot PATH once from a new interactive TTY (bash: `$SHELL -ic` with stdin `/dev/null`, not login-only `-lc`; zsh: `$SHELL -lic`; Windows: `powershell.exe` **with** profile, `$env:Path`). The spawn env is a keep-list (HOME/SHELL/locale/TERM) plus a stock PATH — not the caller's PATH or leftover toolchain exports. `--here` uses this process PATH. Spawn failure or empty PATH → this process PATH and one warning (do not crash). `install` / `--upgrade` always use this process PATH.
 13. `check` (all): missing **required** → exit 1. Version mismatch → warning, exit 0. Missing optional → warning, exit 0.
 14. `check <name>`: missing → exit 1 even if the dep is optional. Unavailable → exit 0. Any detected version → exit 0 (no match check).
 15. `sync-pm` only reads `deps.bun`. Skips if `bun` is absent or `version` is `"latest"`. Rewrites `package.json` by string replace, relative to the **config file directory**.
@@ -575,7 +575,7 @@ Matching uses the same table as `check`. `--upgrade` does not re-run a dep whose
 
 PATH for version probes is snapshotted **once** per `check` invocation:
 
-- Default: interactive TTY PATH (bash: `$SHELL -ic` with stdin `/dev/null`; zsh: `$SHELL -lic`; Windows: `powershell.exe` with profile, `$env:Path`).
+- Default: interactive TTY PATH (bash: `$SHELL -ic` with stdin `/dev/null`; zsh: `$SHELL -lic`; Windows: `powershell.exe` with profile, `$env:Path`). Spawn env is a keep-list (HOME/SHELL/locale/TERM) plus a stock PATH, not the caller's PATH or leftover toolchain exports.
 - `--here`: this process PATH.
 - Spawn failure or empty PATH: this process PATH, one warning, do not crash.
 
@@ -1120,24 +1120,24 @@ npm run setup:deps:sync-pm
 
 ## Gotchas
 
-| Trap                                            | What actually happens                                                                                                                                        |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `install <name>` of a dep with `dependsOn`      | Dependents are **not** installed.                                                                                                                            |
-| Tool already installed at the wrong version     | `install` skips. `install --upgrade` re-runs the command. If PATH still shows the old binary (brew/nvm/fnm), that is a shadow warning, not a failed install. |
-| Agent/IDE PATH vs a new terminal                | `check` uses an interactive TTY PATH snapshot (`.bashrc` / `.zshrc` load). `check --here` uses this process PATH. `install` always uses this process PATH.   |
-| `--dry-run` to "see what would skip"            | Dry-run never checks installed versions. Everything with a command is "installed".                                                                           |
-| Check command that prints no `N.N`              | Treated as not installed. Install will run every time.                                                                                                       |
-| `check <optional-dep>` when missing             | Exit 1. `required: false` only changes all-deps `install` / `check`.                                                                                         |
-| `{{arch}}` on `x64`                             | `amd64`, not `x64`.                                                                                                                                          |
-| Linux without apt/dnf/pacman                    | Detected as `linux-apt`.                                                                                                                                     |
-| `os.windows` uses `\|\|` plus `$env:`           | Routed to PowerShell; `\|\|` is wrong. Keep cmd syntax and PowerShell syntax in separate commands.                                                           |
-| `env.detect` writes the resolved path           | No. It writes the template (`$HOME/...`).                                                                                                                    |
-| Extra env tokens in `detect` (`$XDG_DATA_HOME`) | Not expanded. Existence check looks for a literal `$XDG_DATA_HOME/…` path.                                                                                   |
-| `sync-pm` for node                              | Not implemented. Only `deps.bun`.                                                                                                                            |
-| `packageJsonPath` relative to cwd               | No. Relative to the config file directory.                                                                                                                   |
-| Import `@lovrozagar/crossdeps/env`              | Not exported. Use the CLI or copy the idea.                                                                                                                  |
-| JSON config                                     | Not supported.                                                                                                                                               |
-| Walking parent dirs for config                  | Not supported. Run from the directory that contains the file, or pass `--config`.                                                                            |
+| Trap                                            | What actually happens                                                                                                                                                                                 |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `install <name>` of a dep with `dependsOn`      | Dependents are **not** installed.                                                                                                                                                                     |
+| Tool already installed at the wrong version     | `install` skips. `install --upgrade` re-runs the command. If PATH still shows the old binary (brew/nvm/fnm), that is a shadow warning, not a failed install.                                          |
+| Agent/IDE PATH vs a new terminal                | `check` uses an interactive TTY PATH snapshot with a keep-list spawn env (stock PATH, no leftover toolchain exports). `check --here` uses this process PATH. `install` always uses this process PATH. |
+| `--dry-run` to "see what would skip"            | Dry-run never checks installed versions. Everything with a command is "installed".                                                                                                                    |
+| Check command that prints no `N.N`              | Treated as not installed. Install will run every time.                                                                                                                                                |
+| `check <optional-dep>` when missing             | Exit 1. `required: false` only changes all-deps `install` / `check`.                                                                                                                                  |
+| `{{arch}}` on `x64`                             | `amd64`, not `x64`.                                                                                                                                                                                   |
+| Linux without apt/dnf/pacman                    | Detected as `linux-apt`.                                                                                                                                                                              |
+| `os.windows` uses `\|\|` plus `$env:`           | Routed to PowerShell; `\|\|` is wrong. Keep cmd syntax and PowerShell syntax in separate commands.                                                                                                    |
+| `env.detect` writes the resolved path           | No. It writes the template (`$HOME/...`).                                                                                                                                                             |
+| Extra env tokens in `detect` (`$XDG_DATA_HOME`) | Not expanded. Existence check looks for a literal `$XDG_DATA_HOME/…` path.                                                                                                                            |
+| `sync-pm` for node                              | Not implemented. Only `deps.bun`.                                                                                                                                                                     |
+| `packageJsonPath` relative to cwd               | No. Relative to the config file directory.                                                                                                                                                            |
+| Import `@lovrozagar/crossdeps/env`              | Not exported. Use the CLI or copy the idea.                                                                                                                                                           |
+| JSON config                                     | Not supported.                                                                                                                                                                                        |
+| Walking parent dirs for config                  | Not supported. Run from the directory that contains the file, or pass `--config`.                                                                                                                     |
 
 ## Releases
 

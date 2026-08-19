@@ -39,6 +39,55 @@ export function pathEnv(searchPath: string, base: NodeJS.ProcessEnv = process.en
 	return { ...base, PATH: searchPath, Path: searchPath }
 }
 
+/** HOME/USER/SHELL, locale, TERM, Windows profile roots. Not PATH. Not leftover toolchain exports. */
+export const TTY_ENV_KEEP = [
+	"ComSpec",
+	"COMSPEC",
+	"HOME",
+	"HOMEDRIVE",
+	"HOMEPATH",
+	"HOMESHARE",
+	"LANG",
+	"LANGUAGE",
+	"LOGNAME",
+	"PATHEXT",
+	"SHELL",
+	"SYSTEMROOT",
+	"SystemRoot",
+	"TERM",
+	"USER",
+	"USERPROFILE",
+	"WINDIR",
+	"windir",
+] as const
+
+export function isTtyEnvKeep(key: string): boolean {
+	if (key.startsWith("LC_")) return true
+	return (TTY_ENV_KEEP as readonly string[]).includes(key)
+}
+
+export function unixStockPath(): string {
+	return "/usr/local/bin:/usr/bin:/bin"
+}
+
+export function windowsStockPath(env: NodeJS.ProcessEnv): string {
+	const root = env.SYSTEMROOT || env.SystemRoot || "C:\\Windows"
+	return `${root}\\System32;${root}`
+}
+
+/** Env for the TTY PATH spawn. Interactive rc applies the default toolchain on a stock PATH. */
+export function ttySnapshotEnv(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): NodeJS.ProcessEnv {
+	const out: NodeJS.ProcessEnv = {}
+	for (const [key, value] of Object.entries(env)) {
+		if (value === undefined) continue
+		if (isTtyEnvKeep(key)) out[key] = value
+	}
+	const stock = platform === "win32" ? windowsStockPath(env) : unixStockPath()
+	out.PATH = stock
+	out.Path = stock
+	return out
+}
+
 /** bash: interactive (`-ic`). zsh: login+interactive (`-lic`). Other Unix shells: `-ic`. */
 export function unixPathSnapshotArgs(shell: string): readonly [string, string] {
 	const name = basename(shell).replace(/\.exe$/i, "")
@@ -61,6 +110,8 @@ export function parsePathOutput(out: string): string {
  * Unix bash: `$SHELL -ic` with stdin `/dev/null` (not login-only `-lc`).
  * Unix zsh: `$SHELL -lic` (`.zprofile` + `.zshrc`).
  * Windows: `powershell.exe` with profile (`$env:Path`), not `-NoProfile`.
+ * Spawn env is a keep-list (HOME/SHELL/locale/TERM) plus a stock PATH so leftover
+ * parent PATH and toolchain exports cannot pin a stale binary.
  * Spawn failure or empty PATH → this process PATH (`source: "process"`).
  */
 export function snapshotTtyPath(
@@ -69,10 +120,11 @@ export function snapshotTtyPath(
 	execFile: ExecFile = defaultExecFile,
 ): PathSnapshot {
 	try {
+		const childEnv = ttySnapshotEnv(env, platform)
 		const raw =
 			platform === "win32"
-				? execFile("powershell.exe", WINDOWS_TTY_PATH_ARGS, env)
-				: execFile(env.SHELL || "/bin/sh", unixPathSnapshotArgs(env.SHELL || "/bin/sh"), env)
+				? execFile("powershell.exe", WINDOWS_TTY_PATH_ARGS, childEnv)
+				: execFile(env.SHELL || "/bin/sh", unixPathSnapshotArgs(env.SHELL || "/bin/sh"), childEnv)
 		const path = parsePathOutput(raw)
 		if (path) return { path, source: "tty" }
 	} catch {

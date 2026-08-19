@@ -1,6 +1,6 @@
 {
 	"name": "@lovrozagar/crossdeps",
-	"version": "0.2.2",
+	"version": "0.2.3",
 	"description": "Cross-platform system dependency manager. Define deps in a config file, run crossdeps install.",
 	"keywords": [
 		"cli",

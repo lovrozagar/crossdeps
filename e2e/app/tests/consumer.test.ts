@@ -459,9 +459,17 @@ describe("CLI check PATH snapshot (unix interactive shell)", () => {
 		writeFileSync(join(home, ".profile"), `export PATH=${JSON.stringify(loginDir)}":$PATH"\n`)
 		writeFileSync(join(home, ".bash_profile"), `export PATH=${JSON.stringify(loginDir)}":$PATH"\n`)
 		writeProbeConfig(dir, "3.2.1")
+		const poisonDir = join(home, "poison-bin")
+		mkdirSync(poisonDir, { recursive: true })
+		writePathProbe(poisonDir, "9.9.9")
 		const result = await runCli(["check", "probe", "--config", join(dir, "crossdeps.config.ts")], {
 			cwd: dir,
-			env: { HOME: home, SHELL: "/bin/bash", PATH: process.env.PATH },
+			env: {
+				HOME: home,
+				SHELL: "/bin/bash",
+				PATH: `${poisonDir}${delimiter}${process.env.PATH ?? ""}`,
+				NVM_BIN: poisonDir,
+			},
 		})
 		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
 		expect(result.stdout).toContain("probe@3.2.1")

@@ -12,7 +12,11 @@ import {
 	pathEnv,
 	processPath,
 	snapshotTtyPath,
+	isTtyEnvKeep,
+	ttySnapshotEnv,
 	unixPathSnapshotArgs,
+	unixStockPath,
+	windowsStockPath,
 	type ExecFile,
 } from "../../src/path.ts"
 
@@ -71,6 +75,87 @@ describe("pathEnv", () => {
 	})
 })
 
+describe("isTtyEnvKeep", () => {
+	it("keeps identity, locale, TERM, and Windows profile roots", () => {
+		expect(isTtyEnvKeep("HOME")).toBe(true)
+		expect(isTtyEnvKeep("USER")).toBe(true)
+		expect(isTtyEnvKeep("SHELL")).toBe(true)
+		expect(isTtyEnvKeep("LANG")).toBe(true)
+		expect(isTtyEnvKeep("LC_TIME")).toBe(true)
+		expect(isTtyEnvKeep("TERM")).toBe(true)
+		expect(isTtyEnvKeep("USERPROFILE")).toBe(true)
+	})
+
+	it("rejects PATH and leftover toolchain exports", () => {
+		expect(isTtyEnvKeep("PATH")).toBe(false)
+		expect(isTtyEnvKeep("Path")).toBe(false)
+		expect(isTtyEnvKeep("NVM_BIN")).toBe(false)
+		expect(isTtyEnvKeep("FNM_MULTISHELL_PATH")).toBe(false)
+		expect(isTtyEnvKeep("COLORTERM")).toBe(false)
+		expect(isTtyEnvKeep("TMPDIR")).toBe(false)
+	})
+})
+
+describe("ttySnapshotEnv", () => {
+	it("keeps HOME/SHELL/locale and uses a stock PATH", () => {
+		const env = ttySnapshotEnv(
+			{
+				HOME: "/home/me",
+				SHELL: "/bin/bash",
+				USER: "me",
+				LANG: "C.UTF-8",
+				LC_TIME: "C",
+				TERM: "xterm",
+				PATH: "/stale/bin:/usr/bin",
+				NVM_BIN: "/stale/bin",
+			},
+			"linux",
+		)
+		expect(env.HOME).toBe("/home/me")
+		expect(env.SHELL).toBe("/bin/bash")
+		expect(env.USER).toBe("me")
+		expect(env.LANG).toBe("C.UTF-8")
+		expect(env.LC_TIME).toBe("C")
+		expect(env.TERM).toBe("xterm")
+		expect(env.PATH).toBe(unixStockPath())
+		expect(env.NVM_BIN).toBeUndefined()
+	})
+
+	it("drops parent PATH and leftover toolchain exports", () => {
+		const env = ttySnapshotEnv(
+			{
+				HOME: "/home/me",
+				PATH: "/poison",
+				NVM_BIN: "/stale/bin",
+				NVM_INC: "/stale/include",
+				FNM_MULTISHELL_PATH: "/fnm",
+				VOLTA_HOME: "/volta",
+				ASDF_DIR: "/asdf",
+				COLORTERM: "truecolor",
+			},
+			"linux",
+		)
+		expect(env.PATH).toBe("/usr/local/bin:/usr/bin:/bin")
+		expect(env.NVM_BIN).toBeUndefined()
+		expect(env.NVM_INC).toBeUndefined()
+		expect(env.FNM_MULTISHELL_PATH).toBeUndefined()
+		expect(env.VOLTA_HOME).toBeUndefined()
+		expect(env.ASDF_DIR).toBeUndefined()
+		expect(env.COLORTERM).toBeUndefined()
+	})
+
+	it("uses SystemRoot for the Windows stock PATH", () => {
+		const env = ttySnapshotEnv({ USERPROFILE: "C:\\Users\\me", SYSTEMROOT: "C:\\Windows" }, "win32")
+		expect(env.PATH).toBe(windowsStockPath({ SYSTEMROOT: "C:\\Windows" }))
+		expect(env.Path).toBe(env.PATH)
+		expect(env.USERPROFILE).toBe("C:\\Users\\me")
+	})
+
+	it("defaults Windows stock PATH to C:\\Windows when SystemRoot is missing", () => {
+		expect(windowsStockPath({})).toBe("C:\\Windows\\System32;C:\\Windows")
+	})
+})
+
 describe("unixPathSnapshotArgs", () => {
 	it("uses interactive -ic for bash and sh", () => {
 		expect(unixPathSnapshotArgs("/bin/bash")).toEqual([...UNIX_BASH_PATH_ARGS])
@@ -104,6 +189,66 @@ describe("snapshotTtyPath", () => {
 			path: "/interactive/bin:/usr/bin",
 			source: "tty",
 		})
+	})
+
+	it("does not pass parent toolchain exports or PATH into the TTY spawn", () => {
+		let seen: NodeJS.ProcessEnv | undefined
+		const spy: ExecFile = (_file, _args, env) => {
+			seen = env
+			return "/tty/bin\n"
+		}
+		snapshotTtyPath(
+			"linux",
+			{
+				HOME: "/home/me",
+				SHELL: "/bin/bash",
+				PATH: "/stale/bin:/usr/bin",
+				NVM_BIN: "/stale/bin",
+				NVM_INC: "/stale/include",
+			},
+			spy,
+		)
+		expect(seen?.NVM_BIN).toBeUndefined()
+		expect(seen?.NVM_INC).toBeUndefined()
+		expect(seen?.PATH).toBe(unixStockPath())
+		expect(seen?.HOME).toBe("/home/me")
+		expect(seen?.SHELL).toBe("/bin/bash")
+
+		snapshotTtyPath("win32", { USERPROFILE: "C:\\Users\\me", SYSTEMROOT: "D:\\Win", PATH: "C:\\stale" }, spy)
+		expect(seen?.PATH).toBe(windowsStockPath({ SYSTEMROOT: "D:\\Win" }))
+		expect(seen?.USERPROFILE).toBe("C:\\Users\\me")
+	})
+
+	it("TTY spawn env has no parent PATH or leftover toolchain exports", () => {
+		if (process.platform === "win32") return
+		const dir = mkdtempSync(join(tmpdir(), "crossdeps-tty-isolate-"))
+		const shell = join(dir, "shell")
+		writeFileSync(
+			shell,
+			[
+				"#!/bin/sh",
+				'if [ -n "${NVM_BIN-}" ] || [ -n "${FNM_MULTISHELL_PATH-}" ]; then',
+				'  printf %s "LEAKED_VM"',
+				"  exit 0",
+				"fi",
+				'case "$PATH" in',
+				'  *poison*) printf %s "LEAKED_PATH"; exit 0 ;;',
+				"esac",
+				'printf %s "/isolated"',
+				"",
+			].join("\n"),
+			{ mode: 0o755 },
+		)
+		chmodSync(shell, 0o755)
+		const snap = snapshotTtyPath("linux", {
+			HOME: dir,
+			USER: "me",
+			SHELL: shell,
+			PATH: "/poison/bin:/usr/bin",
+			NVM_BIN: "/poison/bin",
+			FNM_MULTISHELL_PATH: "/fnm",
+		})
+		expect(snap).toEqual({ path: "/isolated", source: "tty" })
 	})
 
 	it("spawns zsh with -lic", () => {
@@ -159,18 +304,27 @@ describe("snapshotTtyPath", () => {
 		const home = mkdtempSync(join(tmpdir(), "crossdeps-tty-bash-"))
 		const interactiveDir = join(home, "interactive-bin")
 		const loginDir = join(home, "login-bin")
+		const poisonDir = join(home, "poison-bin")
 		mkdirSync(interactiveDir)
 		mkdirSync(loginDir)
+		mkdirSync(poisonDir)
 		writeFileSync(join(home, ".bashrc"), `export PATH=${JSON.stringify(interactiveDir)}":$PATH"\n`)
 		writeFileSync(join(home, ".profile"), `export PATH=${JSON.stringify(loginDir)}":$PATH"\n`)
 		writeFileSync(join(home, ".bash_profile"), `export PATH=${JSON.stringify(loginDir)}":$PATH"\n`)
-		const env: NodeJS.ProcessEnv = { ...process.env, HOME: home, SHELL: bash }
+		const env: NodeJS.ProcessEnv = {
+			...process.env,
+			HOME: home,
+			SHELL: bash,
+			PATH: `${poisonDir}:/usr/bin`,
+			NVM_BIN: poisonDir,
+		}
 		delete env.BASH_ENV
 		delete env.ENV
 		const snap = snapshotTtyPath(process.platform, env)
 		expect(snap.source).toBe("tty")
 		expect(snap.path.split(":").includes(interactiveDir)).toBe(true)
 		expect(snap.path.split(":").includes(loginDir)).toBe(false)
+		expect(snap.path.split(":").includes(poisonDir)).toBe(false)
 	})
 
 	it("does not treat stdin as a TTY", () => {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3 - 2026-08-20
+
+- TTY PATH snapshot spawn no longer inherits the caller's PATH or leftover toolchain exports. Child gets HOME/SHELL/locale/TERM plus a stock PATH so interactive rc can apply the default toolchain
+- `check` in a long-lived agent session matches a new TTY instead of a stale parent toolchain
+
 ## 0.2.2 - 2026-08-19
 
 - `check` snapshots PATH from a new interactive TTY (bash: `$SHELL -ic` with stdin `/dev/null`; zsh: `$SHELL -lic`; Windows: PowerShell with profile), not a login-only shell
