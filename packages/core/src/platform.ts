@@ -5,16 +5,18 @@
 import { execSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { OS_TARGETS, type OsTarget } from "./config.ts"
+import { pathEnv } from "./path.ts"
 
 export function commandLookup(command: string, platform: NodeJS.Platform = process.platform): string {
 	return platform === "win32" ? `where ${command} >nul 2>&1` : `command -v ${command} >/dev/null 2>&1`
 }
 
-export function commandExists(command: string): boolean {
+export function commandExists(command: string, searchPath?: string): boolean {
 	const unquoted = command.replace(/^["']|["']$/g, "")
 	if (existsSync(unquoted)) return true
+	const opts = searchPath !== undefined ? { env: pathEnv(searchPath) } : undefined
 	try {
-		execSync(commandLookup(command))
+		execSync(commandLookup(command), opts)
 		return true
 	} catch {
 		return false
@@ -22,16 +24,22 @@ export function commandExists(command: string): boolean {
 }
 
 /** Resolved path of the first token (`command -v` / `where`). Null if missing. */
-export function whichBinary(command: string, platform: NodeJS.Platform = process.platform): string | null {
+export function whichBinary(
+	command: string,
+	platform: NodeJS.Platform = process.platform,
+	searchPath?: string,
+): string | null {
 	const token = command.replace(/^["']|["']$/g, "")
 	if (!token) return null
 	if (existsSync(token)) return token
+	const opts: { encoding: "utf-8"; env?: NodeJS.ProcessEnv } = { encoding: "utf-8" }
+	if (searchPath !== undefined) opts.env = pathEnv(searchPath)
 	try {
 		if (platform === "win32") {
-			const out = execSync(`where ${token}`, { encoding: "utf-8" }).trim()
+			const out = execSync(`where ${token}`, opts).trim()
 			return out.split(/\r?\n/).find(Boolean) ?? null
 		}
-		const out = execSync(`command -v ${token}`, { encoding: "utf-8" }).trim()
+		const out = execSync(`command -v ${token}`, opts).trim()
 		return out || null
 	} catch {
 		return null

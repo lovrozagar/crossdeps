@@ -1,6 +1,6 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { delimiter, join } from "node:path"
 import { describe, expect, test } from "bun:test"
 import { detectOs } from "@lovrozagar/crossdeps"
 import { bunBinary, extraConfig, label, order, presentCheck, presentInstall, presentPinMatches } from "../src/app.ts"
@@ -341,5 +341,161 @@ describe("CLI as a workspace consumer", () => {
 			expect(written).toContain('export TOOL_HOME="$HOME/tool"')
 			expect(written).toContain('export PATH="$PATH:$HOME/tool/bin"')
 		}
+	})
+})
+
+const PATH_PROBE = "crossdeps-path-probe"
+const LOGIN_PATH_WARN = "could not read login-shell PATH; using this process PATH"
+
+function writePathProbe(dir: string, version: string): void {
+	const isWin = process.platform === "win32"
+	const file = join(dir, isWin ? `${PATH_PROBE}.cmd` : PATH_PROBE)
+	if (isWin) {
+		writeFileSync(file, `@echo off\r\necho ${version}\r\n`)
+	} else {
+		writeFileSync(file, `#!/bin/sh\necho ${version}\n`, { mode: 0o755 })
+		chmodSync(file, 0o755)
+	}
+}
+
+function writeProbeConfig(dir: string, version = "4.4.4"): string {
+	const configPath = join(dir, "crossdeps.config.ts")
+	writeFileSync(
+		configPath,
+		`export default {
+	deps: {
+		probe: {
+			check: { command: "${PATH_PROBE} --version" },
+			description: "path probe",
+			os: { all: "echo unused" },
+			required: true,
+			version: ${JSON.stringify(version)},
+		},
+	},
+}
+`,
+	)
+	return configPath
+}
+
+function writeFakeLoginShell(dir: string, loginPath: string): string {
+	const file = join(dir, "fake-login-shell")
+	writeFileSync(
+		file,
+		`#!/bin/sh
+if [ "$1" = "-lc" ]; then
+  PATH=${JSON.stringify(loginPath)} eval "$2"
+  exit $?
+fi
+exit 1
+`,
+		{ mode: 0o755 },
+	)
+	chmodSync(file, 0o755)
+	return file
+}
+
+describe("CLI check PATH snapshot", () => {
+	test("--here uses this process PATH", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "crossdeps-path-here-"))
+		writePathProbe(dir, "4.4.4")
+		const configPath = writeProbeConfig(dir)
+		const path = `${dir}${delimiter}${process.env.PATH ?? ""}`
+
+		const here = await runCli(["check", "--here", "probe", "--config", configPath], { cwd: dir, env: { PATH: path } })
+		expect(here.exitCode, `${here.stdout}\n${here.stderr}`).toBe(0)
+		expect(here.stdout).toContain("probe@4.4.4")
+		expect(here.stderr).not.toContain(LOGIN_PATH_WARN)
+
+		const hereAfter = await runCli(["check", "probe", "--here", "--config", configPath], {
+			cwd: dir,
+			env: { PATH: path },
+		})
+		expect(hereAfter.exitCode).toBe(0)
+		expect(hereAfter.stdout).toContain("probe@4.4.4")
+		expect(hereAfter.stderr).not.toContain(LOGIN_PATH_WARN)
+	})
+
+	test("install uses process PATH and ignores --here", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "crossdeps-path-install-"))
+		writePathProbe(dir, "4.4.4")
+		const configPath = writeProbeConfig(dir)
+		const path = `${dir}${delimiter}${process.env.PATH ?? ""}`
+
+		const installed = await runCli(["install", "probe", "--here", "--config", configPath], {
+			cwd: dir,
+			env: { PATH: path, SHELL: "/no/such/crossdeps-shell" },
+		})
+		expect(installed.exitCode, `${installed.stdout}\n${installed.stderr}`).toBe(0)
+		expect(installed.stdout).toContain("Already installed (4.4.4)")
+		expect(installed.stderr).not.toContain(LOGIN_PATH_WARN)
+	})
+
+	test("check --here still works when login spawn would fail", async () => {
+		const result = await runCli(["check", "--here", "present"], {
+			cwd: appDir,
+			env: { SHELL: "/no/such/crossdeps-shell" },
+		})
+		expect(result.exitCode).toBe(0)
+		expect(result.stdout).toContain("present@1.0.0")
+		expect(result.stderr).not.toContain(LOGIN_PATH_WARN)
+	})
+})
+
+describe("CLI check PATH snapshot (unix login shell)", () => {
+	test("check uses the PATH printed by $SHELL -lc", async () => {
+		if (process.platform === "win32") return
+		const dir = mkdtempSync(join(tmpdir(), "crossdeps-path-login-"))
+		const loginDir = join(dir, "login")
+		const processDir = join(dir, "proc")
+		mkdirSync(loginDir)
+		mkdirSync(processDir)
+		writePathProbe(loginDir, "3.2.1")
+		writePathProbe(processDir, "9.9.9")
+		writeProbeConfig(dir, "3.2.1")
+		const shell = writeFakeLoginShell(dir, loginDir)
+		const path = `${processDir}${delimiter}${process.env.PATH ?? ""}`
+
+		const result = await runCli(["check", "probe", "--config", join(dir, "crossdeps.config.ts")], {
+			cwd: dir,
+			env: { PATH: path, SHELL: shell },
+		})
+		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
+		expect(result.stdout).toContain("probe@3.2.1")
+		expect(result.stdout).not.toContain("9.9.9")
+		expect(result.stderr).not.toContain(LOGIN_PATH_WARN)
+	})
+
+	test("login spawn fail falls back to process PATH with one warning", async () => {
+		if (process.platform === "win32") return
+		const dir = mkdtempSync(join(tmpdir(), "crossdeps-path-fail-"))
+		writePathProbe(dir, "4.4.4")
+		writeProbeConfig(dir)
+		const path = `${dir}${delimiter}${process.env.PATH ?? ""}`
+
+		const result = await runCli(["check", "probe", "--config", join(dir, "crossdeps.config.ts")], {
+			cwd: dir,
+			env: { PATH: path, SHELL: "/no/such/crossdeps-shell" },
+		})
+		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
+		expect(result.stdout).toContain("probe@4.4.4")
+		expect(result.stderr).toContain(LOGIN_PATH_WARN)
+	})
+
+	test("empty login PATH falls back to process PATH with one warning", async () => {
+		if (process.platform === "win32") return
+		const dir = mkdtempSync(join(tmpdir(), "crossdeps-path-empty-"))
+		writePathProbe(dir, "4.4.4")
+		writeProbeConfig(dir)
+		const shell = writeFakeLoginShell(dir, "")
+		const path = `${dir}${delimiter}${process.env.PATH ?? ""}`
+
+		const result = await runCli(["check", "probe", "--config", join(dir, "crossdeps.config.ts")], {
+			cwd: dir,
+			env: { PATH: path, SHELL: shell },
+		})
+		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
+		expect(result.stdout).toContain("probe@4.4.4")
+		expect(result.stderr).toContain(LOGIN_PATH_WARN)
 	})
 })

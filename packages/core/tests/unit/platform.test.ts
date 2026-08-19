@@ -1,6 +1,6 @@
-import { mkdtempSync, writeFileSync } from "node:fs"
+import { chmodSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { delimiter, join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { OS_TARGETS } from "../../src/config.ts"
 import {
@@ -87,6 +87,32 @@ describe("whichBinary", () => {
 		expect(whichBinary("")).toBeNull()
 		expect(whichBinary('""')).toBeNull()
 		expect(whichBinary("''")).toBeNull()
+	})
+
+	it("resolves a command from an explicit search PATH", () => {
+		const dir = mkdtempSync(join(tmpdir(), "crossdeps-which-path-"))
+		const isWin = process.platform === "win32"
+		const name = isWin ? "crossdeps-path-probe.cmd" : "crossdeps-path-probe"
+		const file = join(dir, name)
+		writeFileSync(file, isWin ? "@echo off\r\necho 1.0.0\r\n" : "#!/bin/sh\necho 1.0.0\n")
+		if (!isWin) chmodSync(file, 0o755)
+		const token = isWin ? "crossdeps-path-probe" : "crossdeps-path-probe"
+		expect(whichBinary(token, process.platform, dir)).toBeTruthy()
+		expect(whichBinary(token, process.platform, dir + "-missing")).toBeNull()
+	})
+})
+
+describe("commandExists with search PATH", () => {
+	it("finds a probe only on the given PATH", () => {
+		const dir = mkdtempSync(join(tmpdir(), "crossdeps-exists-path-"))
+		const isWin = process.platform === "win32"
+		const file = join(dir, isWin ? "crossdeps-exists-probe.cmd" : "crossdeps-exists-probe")
+		writeFileSync(file, isWin ? "@echo off\r\n" : "#!/bin/sh\n")
+		if (!isWin) chmodSync(file, 0o755)
+		const token = isWin ? "crossdeps-exists-probe" : "crossdeps-exists-probe"
+		expect(commandExists(token, dir)).toBe(true)
+		expect(commandExists(token, `${dir}${delimiter}nope`)).toBe(true)
+		expect(commandExists(token, join(dir, "empty"))).toBe(false)
 	})
 })
 

@@ -28,6 +28,7 @@ import {
 } from "./env.ts"
 import { sortByDependencies } from "./graph.ts"
 import { runShellCommand } from "./exec.ts"
+import { LOGIN_PATH_FALLBACK_WARN, pathEnv, processPath, snapshotLoginPath } from "./path.ts"
 import { commandExists, detectOs, parseOsTarget, whichBinary } from "./platform.ts"
 
 const CONFIG_NAMES = ["crossdeps.config.ts", "crossdeps.config.js", "crossdeps.config.mjs"]
@@ -47,6 +48,7 @@ Flags:
   --os <target>        Force OS target (or set CROSSDEPS_OS)
   --dry-run            Print install commands without running them
   --upgrade            Re-run install when the detected version does not match
+  --here               check: use this process PATH instead of a login-shell snapshot
 `
 
 /**
@@ -130,22 +132,28 @@ function checkBinaryToken(name: string, config: SystemDepConfig): string | undef
 	return resolveCheckCommand(name, config).split(/\s+/)[0]
 }
 
-function binaryPathNote(name: string, config: SystemDepConfig): string {
+function binaryPathNote(name: string, config: SystemDepConfig, searchPath?: string): string {
 	const token = checkBinaryToken(name, config)
-	const path = token ? whichBinary(token) : null
+	const path = token ? whichBinary(token, process.platform, searchPath) : null
 	return path ? ` ${path}` : ""
 }
 
-function getInstalledVersion(name: string, config: SystemDepConfig): string | null {
+function getInstalledVersion(name: string, config: SystemDepConfig, searchPath?: string): string | null {
 	const checkCmd = resolveCheckCommand(name, config)
 	const binary = checkBinaryToken(name, config)
-	if (binary && !commandExists(binary)) return null
+	if (binary && !commandExists(binary, searchPath)) return null
 
 	try {
-		const output = execSync(checkCmd, {
+		const execOpts: {
+			encoding: "utf-8"
+			env?: NodeJS.ProcessEnv
+			stdio: ["pipe", "pipe", "pipe"]
+		} = {
 			encoding: "utf-8",
 			stdio: ["pipe", "pipe", "pipe"],
-		}).trim()
+		}
+		if (searchPath !== undefined) execOpts.env = pathEnv(searchPath)
+		const output = execSync(checkCmd, execOpts).trim()
 		const match = output.match(/(\d+\.\d+[\w.-]*)/)
 		return match?.[1] ?? null
 	} catch {
@@ -344,13 +352,24 @@ function cmdInstall(
 	console.log("\nAll required system dependencies are ready!")
 }
 
+function resolveCheckSearchPath(here: boolean): string {
+	if (here) return processPath()
+	const snapshot = snapshotLoginPath()
+	if (snapshot.source === "process") {
+		console.warn(LOGIN_PATH_FALLBACK_WARN)
+	}
+	return snapshot.path
+}
+
 function cmdCheck(
 	deps: Record<string, SystemDepConfig>,
 	configDir: string,
 	packageJsonPath: string,
 	target: string | undefined,
+	here = false,
 ): void {
 	const os = detectOs()
+	const searchPath = resolveCheckSearchPath(here)
 
 	if (target) {
 		const config = deps[target]
@@ -360,7 +379,7 @@ function cmdCheck(
 			process.exit(1)
 		}
 
-		const installed = getInstalledVersion(target, config)
+		const installed = getInstalledVersion(target, config, searchPath)
 		const available = resolveOsCommand(target, config, os) !== null
 
 		if (!available) {
@@ -369,7 +388,7 @@ function cmdCheck(
 			console.log(`${target} — not installed (expected ${config.version})`)
 			process.exit(1)
 		} else {
-			console.log(`${target}@${installed} (expected ${config.version})${binaryPathNote(target, config)}`)
+			console.log(`${target}@${installed} (expected ${config.version})${binaryPathNote(target, config, searchPath)}`)
 		}
 		return
 	}
@@ -383,7 +402,7 @@ function cmdCheck(
 	let missing = 0
 
 	for (const [name, config] of Object.entries(deps)) {
-		const installed = getInstalledVersion(name, config)
+		const installed = getInstalledVersion(name, config, searchPath)
 		const badge = config.required ? "[required]" : "[optional]"
 		const available = resolveOsCommand(name, config, os) !== null
 
@@ -400,7 +419,9 @@ function cmdCheck(
 			console.log(`  v ${badge} ${name}@${installed}`)
 			ok++
 		} else {
-			console.log(`  ~ ${badge} ${name}@${installed} (expected ${config.version})${binaryPathNote(name, config)}`)
+			console.log(
+				`  ~ ${badge} ${name}@${installed} (expected ${config.version})${binaryPathNote(name, config, searchPath)}`,
+			)
 			warn++
 		}
 	}
@@ -536,7 +557,8 @@ async function main(): Promise<void> {
 	const configStripped = stripFlag(osFlag.args, "--config")
 	const dry = stripBoolFlag(configStripped.args, "--dry-run")
 	const upgrade = stripBoolFlag(dry.args, "--upgrade")
-	const args = upgrade.args
+	const here = stripBoolFlag(upgrade.args, "--here")
+	const args = here.args
 	const command = args[0]
 	const target = args[1]
 
@@ -545,7 +567,7 @@ async function main(): Promise<void> {
 			cmdInstall(deps, target, dry.present, upgrade.present)
 			break
 		case "check":
-			cmdCheck(deps, configDir, packageJsonPath, target)
+			cmdCheck(deps, configDir, packageJsonPath, target, here.present)
 			break
 		case "env":
 			cmdEnv(deps)

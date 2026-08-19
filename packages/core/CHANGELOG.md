@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 - 2026-08-19
+
+- `check` / `check <name>` snapshot PATH once from a login shell (Unix: `$SHELL -lc 'printf %s "$PATH"'`; Windows: `powershell.exe` with profile, `$env:Path`) and run every version probe with that PATH
+- `check --here` uses this process PATH instead
+- Login spawn failure or empty PATH falls back to this process PATH with one warning (does not crash)
+- `install` / `--upgrade` still use this process PATH
+
 ## 0.2.0 - 2026-08-19
 
 - `install --upgrade` re-runs the install command when the detected version does not match the pin (`latest` still matches any parsed version)

@@ -15,21 +15,21 @@ export default defineConfig({
 			version: "9.9.9",
 		},
 		present: {
-			check: { command: "bun -e \"console.log('1.0.0')\"" },
+			check: { command: `${process.execPath} -e "console.log('1.0.0')"` },
 			description: "Always-present marker dep",
 			os: { all: "bun -e \"console.log('installed-present')\"" },
 			required: true,
 			version: "1.0.0",
 		},
 		stale: {
-			check: { command: "bun -e \"console.log('9.9.9')\"" },
+			check: { command: `${process.execPath} -e "console.log('9.9.9')"` },
 			description: "Present at the wrong version (mismatch fixture)",
 			os: { all: "bun -e \"console.log('upgraded-stale')\"" },
 			required: false,
 			version: "1.0.0",
 		},
 		"unix-only": {
-			check: { command: "bun -e \"console.log('0.1.0')\"" },
+			check: { command: `${process.execPath} -e "console.log('0.1.0')"` },
 			description: "Unavailable on Windows",
 			os: {
 				"linux-apt": "bun -e \"console.log('unix')\"",
