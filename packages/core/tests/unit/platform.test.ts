@@ -3,6 +3,7 @@ import { tmpdir } from "node:os"
 import { delimiter, join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { OS_TARGETS } from "../../src/config.ts"
+import { processPath } from "../../src/path.ts"
 import {
 	commandExists,
 	commandLookup,
@@ -11,6 +12,11 @@ import {
 	parseOsTarget,
 	whichBinary,
 } from "../../src/platform.ts"
+
+/** Prepend `dir` so Windows still finds `where.exe` on the rest of PATH. */
+function searchPathWith(dir: string): string {
+	return `${dir}${delimiter}${processPath()}`
+}
 
 describe("commandExists", () => {
 	it("returns true for a command on PATH", () => {
@@ -96,9 +102,9 @@ describe("whichBinary", () => {
 		const file = join(dir, name)
 		writeFileSync(file, isWin ? "@echo off\r\necho 1.0.0\r\n" : "#!/bin/sh\necho 1.0.0\n")
 		if (!isWin) chmodSync(file, 0o755)
-		const token = isWin ? "crossdeps-path-probe" : "crossdeps-path-probe"
-		expect(whichBinary(token, process.platform, dir)).toBeTruthy()
-		expect(whichBinary(token, process.platform, dir + "-missing")).toBeNull()
+		const token = "crossdeps-path-probe"
+		expect(whichBinary(token, process.platform, searchPathWith(dir))).toBeTruthy()
+		expect(whichBinary(token, process.platform, searchPathWith(join(dir, "missing")))).toBeNull()
 	})
 })
 
@@ -109,10 +115,9 @@ describe("commandExists with search PATH", () => {
 		const file = join(dir, isWin ? "crossdeps-exists-probe.cmd" : "crossdeps-exists-probe")
 		writeFileSync(file, isWin ? "@echo off\r\n" : "#!/bin/sh\n")
 		if (!isWin) chmodSync(file, 0o755)
-		const token = isWin ? "crossdeps-exists-probe" : "crossdeps-exists-probe"
-		expect(commandExists(token, dir)).toBe(true)
-		expect(commandExists(token, `${dir}${delimiter}nope`)).toBe(true)
-		expect(commandExists(token, join(dir, "empty"))).toBe(false)
+		const token = "crossdeps-exists-probe"
+		expect(commandExists(token, searchPathWith(dir))).toBe(true)
+		expect(commandExists(token, searchPathWith(join(dir, "empty")))).toBe(false)
 	})
 })
 
