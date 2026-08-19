@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2 - 2026-08-19
+
+- `check` snapshots PATH from a new interactive TTY (bash: `$SHELL -ic` with stdin `/dev/null`; zsh: `$SHELL -lic`; Windows: PowerShell with profile), not a login-only shell
+- Interactive rc files (`.bashrc`, `.zshrc`) now load, so version-manager PATH matches a new desktop TTY
+- Spawn failure or empty PATH still falls back to this process PATH with one warning
+- `--here`, `install`, and `--upgrade` still use this process PATH
+
 ## 0.2.1 - 2026-08-19
 
 - `check` / `check <name>` snapshot PATH once from a login shell (Unix: `$SHELL -lc 'printf %s "$PATH"'`; Windows: `powershell.exe` with profile, `$env:Path`) and run every version probe with that PATH

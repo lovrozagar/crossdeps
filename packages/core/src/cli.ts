@@ -28,7 +28,7 @@ import {
 } from "./env.ts"
 import { sortByDependencies } from "./graph.ts"
 import { runShellCommand } from "./exec.ts"
-import { LOGIN_PATH_FALLBACK_WARN, pathEnv, processPath, snapshotLoginPath } from "./path.ts"
+import { TTY_PATH_FALLBACK_WARN, pathEnv, processPath, snapshotTtyPath } from "./path.ts"
 import { commandExists, detectOs, parseOsTarget, whichBinary } from "./platform.ts"
 
 const CONFIG_NAMES = ["crossdeps.config.ts", "crossdeps.config.js", "crossdeps.config.mjs"]
@@ -48,7 +48,7 @@ Flags:
   --os <target>        Force OS target (or set CROSSDEPS_OS)
   --dry-run            Print install commands without running them
   --upgrade            Re-run install when the detected version does not match
-  --here               check: use this process PATH instead of a login-shell snapshot
+  --here               check: use this process PATH instead of an interactive-shell snapshot
 `
 
 /**
@@ -354,9 +354,9 @@ function cmdInstall(
 
 function resolveCheckSearchPath(here: boolean): string {
 	if (here) return processPath()
-	const snapshot = snapshotLoginPath()
+	const snapshot = snapshotTtyPath()
 	if (snapshot.source === "process") {
-		console.warn(LOGIN_PATH_FALLBACK_WARN)
+		console.warn(TTY_PATH_FALLBACK_WARN)
 	}
 	return snapshot.path
 }

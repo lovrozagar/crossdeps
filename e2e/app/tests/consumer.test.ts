@@ -345,7 +345,7 @@ describe("CLI as a workspace consumer", () => {
 })
 
 const PATH_PROBE = "crossdeps-path-probe"
-const LOGIN_PATH_WARN = "could not read login-shell PATH; using this process PATH"
+const TTY_PATH_WARN = "could not read interactive-shell PATH; using this process PATH"
 
 function writePathProbe(dir: string, version: string): void {
 	const isWin = process.platform === "win32"
@@ -378,15 +378,17 @@ function writeProbeConfig(dir: string, version = "4.4.4"): string {
 	return configPath
 }
 
-function writeFakeLoginShell(dir: string, loginPath: string): string {
-	const file = join(dir, "fake-login-shell")
+function writeFakeTtyShell(dir: string, ttyPath: string): string {
+	const file = join(dir, "fake-tty-shell")
 	writeFileSync(
 		file,
 		`#!/bin/sh
-if [ "$1" = "-lc" ]; then
-  PATH=${JSON.stringify(loginPath)} eval "$2"
-  exit $?
-fi
+case "$1" in
+  -*c*)
+    PATH=${JSON.stringify(ttyPath)} eval "$2"
+    exit $?
+    ;;
+esac
 exit 1
 `,
 		{ mode: 0o755 },
@@ -405,7 +407,7 @@ describe("CLI check PATH snapshot", () => {
 		const here = await runCli(["check", "--here", "probe", "--config", configPath], { cwd: dir, env: { PATH: path } })
 		expect(here.exitCode, `${here.stdout}\n${here.stderr}`).toBe(0)
 		expect(here.stdout).toContain("probe@4.4.4")
-		expect(here.stderr).not.toContain(LOGIN_PATH_WARN)
+		expect(here.stderr).not.toContain(TTY_PATH_WARN)
 
 		const hereAfter = await runCli(["check", "probe", "--here", "--config", configPath], {
 			cwd: dir,
@@ -413,7 +415,7 @@ describe("CLI check PATH snapshot", () => {
 		})
 		expect(hereAfter.exitCode).toBe(0)
 		expect(hereAfter.stdout).toContain("probe@4.4.4")
-		expect(hereAfter.stderr).not.toContain(LOGIN_PATH_WARN)
+		expect(hereAfter.stderr).not.toContain(TTY_PATH_WARN)
 	})
 
 	test("install uses process PATH and ignores --here", async () => {
@@ -428,22 +430,46 @@ describe("CLI check PATH snapshot", () => {
 		})
 		expect(installed.exitCode, `${installed.stdout}\n${installed.stderr}`).toBe(0)
 		expect(installed.stdout).toContain("Already installed (4.4.4)")
-		expect(installed.stderr).not.toContain(LOGIN_PATH_WARN)
+		expect(installed.stderr).not.toContain(TTY_PATH_WARN)
 	})
 
-	test("check --here still works when login spawn would fail", async () => {
+	test("check --here still works when TTY spawn would fail", async () => {
 		const result = await runCli(["check", "--here", "present"], {
 			cwd: appDir,
 			env: { SHELL: "/no/such/crossdeps-shell" },
 		})
 		expect(result.exitCode).toBe(0)
 		expect(result.stdout).toContain("present@1.0.0")
-		expect(result.stderr).not.toContain(LOGIN_PATH_WARN)
+		expect(result.stderr).not.toContain(TTY_PATH_WARN)
 	})
 })
 
-describe("CLI check PATH snapshot (unix login shell)", () => {
-	test("check uses the PATH printed by $SHELL -lc", async () => {
+describe("CLI check PATH snapshot (unix interactive shell)", () => {
+	test("check sees interactive rc PATH, not login-only files", async () => {
+		if (process.platform === "win32") return
+		const dir = mkdtempSync(join(tmpdir(), "crossdeps-path-rc-"))
+		const home = join(dir, "home")
+		const interactiveDir = join(home, "interactive-bin")
+		const loginDir = join(home, "login-bin")
+		mkdirSync(interactiveDir, { recursive: true })
+		mkdirSync(loginDir, { recursive: true })
+		writePathProbe(interactiveDir, "3.2.1")
+		writePathProbe(loginDir, "9.9.9")
+		writeFileSync(join(home, ".bashrc"), `export PATH=${JSON.stringify(interactiveDir)}":$PATH"\n`)
+		writeFileSync(join(home, ".profile"), `export PATH=${JSON.stringify(loginDir)}":$PATH"\n`)
+		writeFileSync(join(home, ".bash_profile"), `export PATH=${JSON.stringify(loginDir)}":$PATH"\n`)
+		writeProbeConfig(dir, "3.2.1")
+		const result = await runCli(["check", "probe", "--config", join(dir, "crossdeps.config.ts")], {
+			cwd: dir,
+			env: { HOME: home, SHELL: "/bin/bash", PATH: process.env.PATH },
+		})
+		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
+		expect(result.stdout).toContain("probe@3.2.1")
+		expect(result.stdout).not.toContain("9.9.9")
+		expect(result.stderr).not.toContain(TTY_PATH_WARN)
+	})
+
+	test("check uses the PATH printed by an interactive $SHELL", async () => {
 		if (process.platform === "win32") return
 		const dir = mkdtempSync(join(tmpdir(), "crossdeps-path-login-"))
 		const loginDir = join(dir, "login")
@@ -453,7 +479,7 @@ describe("CLI check PATH snapshot (unix login shell)", () => {
 		writePathProbe(loginDir, "3.2.1")
 		writePathProbe(processDir, "9.9.9")
 		writeProbeConfig(dir, "3.2.1")
-		const shell = writeFakeLoginShell(dir, loginDir)
+		const shell = writeFakeTtyShell(dir, loginDir)
 		const path = `${processDir}${delimiter}${process.env.PATH ?? ""}`
 
 		const result = await runCli(["check", "probe", "--config", join(dir, "crossdeps.config.ts")], {
@@ -463,10 +489,10 @@ describe("CLI check PATH snapshot (unix login shell)", () => {
 		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
 		expect(result.stdout).toContain("probe@3.2.1")
 		expect(result.stdout).not.toContain("9.9.9")
-		expect(result.stderr).not.toContain(LOGIN_PATH_WARN)
+		expect(result.stderr).not.toContain(TTY_PATH_WARN)
 	})
 
-	test("login spawn fail falls back to process PATH with one warning", async () => {
+	test("TTY spawn fail falls back to process PATH with one warning", async () => {
 		if (process.platform === "win32") return
 		const dir = mkdtempSync(join(tmpdir(), "crossdeps-path-fail-"))
 		writePathProbe(dir, "4.4.4")
@@ -479,15 +505,15 @@ describe("CLI check PATH snapshot (unix login shell)", () => {
 		})
 		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
 		expect(result.stdout).toContain("probe@4.4.4")
-		expect(result.stderr).toContain(LOGIN_PATH_WARN)
+		expect(result.stderr).toContain(TTY_PATH_WARN)
 	})
 
-	test("empty login PATH falls back to process PATH with one warning", async () => {
+	test("empty TTY PATH falls back to process PATH with one warning", async () => {
 		if (process.platform === "win32") return
 		const dir = mkdtempSync(join(tmpdir(), "crossdeps-path-empty-"))
 		writePathProbe(dir, "4.4.4")
 		writeProbeConfig(dir)
-		const shell = writeFakeLoginShell(dir, "")
+		const shell = writeFakeTtyShell(dir, "")
 		const path = `${dir}${delimiter}${process.env.PATH ?? ""}`
 
 		const result = await runCli(["check", "probe", "--config", join(dir, "crossdeps.config.ts")], {
@@ -496,6 +522,6 @@ describe("CLI check PATH snapshot (unix login shell)", () => {
 		})
 		expect(result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0)
 		expect(result.stdout).toContain("probe@4.4.4")
-		expect(result.stderr).toContain(LOGIN_PATH_WARN)
+		expect(result.stderr).toContain(TTY_PATH_WARN)
 	})
 })

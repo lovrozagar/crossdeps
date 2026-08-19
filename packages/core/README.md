@@ -154,7 +154,7 @@ Follow these rules. They are the actual runtime, not suggestions.
 9. `install` skips when a detected version **matches** the pin (`latest` or substring either way). Mismatch without `--upgrade` skips, prints the resolved binary path, and hints `crossdeps install <name> --upgrade`. `--upgrade` re-runs the install command on mismatch only. After that command succeeds, if PATH still reports a non-matching version, print a shadow warning (do not fail). `--dry-run` never skips.
 10. Failed **required** deps fail `install` (exit 1). Failed **optional** deps are counted as skipped.
 11. Unavailable on this OS is not a failure.
-12. `check` / `check <name>` snapshot PATH once from a login shell (Unix: `$SHELL -lc 'printf %s "$PATH"'`; Windows: `powershell.exe` **with** profile, `$env:Path`) and run every version probe with that PATH so results match a new terminal. `--here` uses this process PATH. Login spawn failure or empty PATH → this process PATH and one warning (do not crash). `install` / `--upgrade` always use this process PATH.
+12. `check` / `check <name>` snapshot PATH once from a new interactive TTY (bash: `$SHELL -ic` with stdin `/dev/null`, not login-only `-lc`; zsh: `$SHELL -lic`; Windows: `powershell.exe` **with** profile, `$env:Path`) and run every version probe with that PATH so results match a new desktop TTY. `--here` uses this process PATH. Spawn failure or empty PATH → this process PATH and one warning (do not crash). `install` / `--upgrade` always use this process PATH.
 13. `check` (all): missing **required** → exit 1. Version mismatch → warning, exit 0. Missing optional → warning, exit 0.
 14. `check <name>`: missing → exit 1 even if the dep is optional. Unavailable → exit 0. Any detected version → exit 0 (no match check).
 15. `sync-pm` only reads `deps.bun`. Skips if `bun` is absent or `version` is `"latest"`. Rewrites `package.json` by string replace, relative to the **config file directory**.
@@ -477,7 +477,7 @@ Flags:
   --os <target>        Force OS target (or set CROSSDEPS_OS)
   --dry-run            Print install commands without running them
   --upgrade            Re-run install when the detected version does not match
-  --here               check: use this process PATH instead of a login-shell snapshot
+  --here               check: use this process PATH instead of an interactive-shell snapshot
 ```
 
 ### Invocation and flags
@@ -495,7 +495,7 @@ Flags may appear before or after the command. Each flag is stripped once (first 
 | `CROSSDEPS_OS`    | all commands   | Same as `--os` when `--os` is not passed.                                                                                                              |
 | `--dry-run`       | `install` only | Prints `dry-run: <command>` and counts the dep as installed. Silently ignored by `check` / `env` / `sync-pm`.                                          |
 | `--upgrade`       | `install` only | Re-run the install command when the detected version does **not** match the pin. Matching versions still skip. Ignored by `check` / `env` / `sync-pm`. |
-| `--here`          | `check` only   | Use this process PATH instead of a login-shell snapshot. Ignored by `install` / `env` / `sync-pm`.                                                     |
+| `--here`          | `check` only   | Use this process PATH instead of an interactive-shell snapshot. Ignored by `install` / `env` / `sync-pm`.                                              |
 
 ```bash
 bunx crossdeps install
@@ -575,7 +575,7 @@ Matching uses the same table as `check`. `--upgrade` does not re-run a dep whose
 
 PATH for version probes is snapshotted **once** per `check` invocation:
 
-- Default: login-shell PATH (Unix: `$SHELL -lc 'printf %s "$PATH"'`; Windows: `powershell.exe` with profile, `$env:Path`).
+- Default: interactive TTY PATH (bash: `$SHELL -ic` with stdin `/dev/null`; zsh: `$SHELL -lic`; Windows: `powershell.exe` with profile, `$env:Path`).
 - `--here`: this process PATH.
 - Spawn failure or empty PATH: this process PATH, one warning, do not crash.
 
@@ -675,7 +675,7 @@ This is a string edit, not a JSON rewrite. It expects the current value to appea
 
 ### Version detection
 
-Used by `install` (skip if present, **this process PATH**) and `check` (login-shell PATH snapshot, or this process PATH with `--here`).
+Used by `install` (skip if present, **this process PATH**) and `check` (interactive TTY PATH snapshot, or this process PATH with `--here`).
 
 ```
 checkCmd = resolveCheckCommand(name, config)
@@ -1124,7 +1124,7 @@ npm run setup:deps:sync-pm
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `install <name>` of a dep with `dependsOn`      | Dependents are **not** installed.                                                                                                                            |
 | Tool already installed at the wrong version     | `install` skips. `install --upgrade` re-runs the command. If PATH still shows the old binary (brew/nvm/fnm), that is a shadow warning, not a failed install. |
-| Agent/IDE PATH vs a new terminal                | `check` uses a login-shell PATH snapshot. `check --here` uses this process PATH. `install` always uses this process PATH.                                    |
+| Agent/IDE PATH vs a new terminal                | `check` uses an interactive TTY PATH snapshot (`.bashrc` / `.zshrc` load). `check --here` uses this process PATH. `install` always uses this process PATH.   |
 | `--dry-run` to "see what would skip"            | Dry-run never checks installed versions. Everything with a command is "installed".                                                                           |
 | Check command that prints no `N.N`              | Treated as not installed. Install will run every time.                                                                                                       |
 | `check <optional-dep>` when missing             | Exit 1. `required: false` only changes all-deps `install` / `check`.                                                                                         |
